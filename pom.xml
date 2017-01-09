@@ -8,6 +8,10 @@
     <name>snitch</name>
     <url>http://maven.apache.org</url>
 
+    <properties>
+        <guava.version>19.0</guava.version>
+    </properties>
+
     <repositories>
         <repository>
             <id>cloudy-aws</id>
@@ -19,6 +23,11 @@
     </repositories>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.cloudability.davis</groupId>
             <artifactId>server</artifactId>

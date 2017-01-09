@@ -6,6 +6,8 @@ import com.cloudability.snitch.model.Graph;
 import com.cloudability.snitch.model.GraphType;
 import com.cloudability.snitch.model.SeriesData;
 
+import java.util.Random;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -23,64 +25,61 @@ public class SnitchResource {
   }
 
   @GET
-  @Path("/org/{orgId}")
+  @Path("/org/{orgId}/logins")
   public Response getOrg(@PathParam("orgId") String orgId) {
-    System.out.println("looking for org " + orgId);
-
-    return Response.ok().entity(buildGraph(orgId))
-        .header("Access-Control-Allow-Origin","*")
-        .build();
-  }
-
-  private Graph buildGraph(String orgId) {
-    return Graph.newBuilder()
-        .withTitle("My Special Graph for org " + orgId)
+    Graph graph = Graph.newBuilder()
+        .withTitle("Number of Logins")
         .withSubTitle("subtitle here")
         .withXAxisTitle("x axis title")
         .withYAxisTitle("y axis title")
         .withGraphType(GraphType.COLUMN)
-        .withXAxisData(new String[] {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"})
+        .withXAxisData(
+            new String[]{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"})
         .withDataPoints(ImmutableList.of(
-            new SeriesData("6666-6666-6666", getDataPoints()),
-            new SeriesData("7777-7777-7777", getDataPoints())
-        ))
+            new SeriesData("7777-7777-7777", getDataPoints(12)),
+            new SeriesData("1234-5678-9876", getDataPoints(12))))
+        .build();
+
+
+    return Response.ok().entity(graph)
+        .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 
-  private double[] getDataPoints() {
-    return new double[] {29.9,
-        71.5,
-        106.4,
-        129.2,
-        144,
-        176,
-        135.6,
-        148.5,
-        216.4,
-        194.1,
-        295.6,
-        454.4};
+  @GET
+  @Path("/org/{orgId}/spend")
+  public Response getSpend(@PathParam("orgId") String orgId) {
+
+    Graph graph = Graph.newBuilder()
+        .withTitle("Total Spend")
+        .withSubTitle("subtitle here")
+        .withXAxisTitle("x axis title")
+        .withYAxisTitle("y axis title")
+        .withGraphType(GraphType.LINE)
+        .withXAxisData(
+            new String[]{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"})
+        .withDataPoints(ImmutableList.of(
+            new SeriesData("7777-7777-7777", getDataPoints(12))))
+        .build();
+
+    return Response.ok().entity(graph)
+        .header("Access-Control-Allow-Origin", "*")
+        .build();
   }
 
-  private String getJson() {
-    return "{"
-        + "\"org\": \"Nike\","
-        + "\"accountId\": \"1234-3456-6789\","
-        + "\"lastLogin\": \"today\","
-        + "\"data\": ["
-        + "29.9,"
-        + "71.5,"
-        + "106.4,"
-        + "129.2,"
-        + "144,"
-        + "176,"
-        + "135.6,"
-        + "148.5,"
-        + "216.4,"
-        + "194.1,"
-        + "295.6,"
-        + "454.4"
-        + "]"
-        + "}";
+
+  private double[] getDataPoints(int numPoints) {
+    double result[] = new double[numPoints];
+    for (int i = 0; i < numPoints; i++) {
+      result[i] = randomDouble();
+    }
+    return result;
+  }
+
+  private double randomDouble() {
+    Random random = new Random();
+    int rangeMin = 1;
+    int rangeMax = 100;
+    return rangeMin + (rangeMax - rangeMin) * random.nextDouble();
   }
 }

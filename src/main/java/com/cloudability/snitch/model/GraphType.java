@@ -1,6 +1,11 @@
 package com.cloudability.snitch.model;
 
 public enum GraphType {
-  LINE,
-  COLUMN
+  line,
+  column;
+
+  @Override
+  public String toString() {
+    return name().toLowerCase();
+  }
 }

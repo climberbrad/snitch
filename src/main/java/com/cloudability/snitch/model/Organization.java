@@ -1,11 +1,11 @@
 package com.cloudability.snitch.model;
 
-import com.google.common.collect.ImmutableList;
-
 public class Organization {
-  public final ImmutableList<Account> account;
+  public final int id;
+  public final String name;
 
-  public Organization(ImmutableList<Account> account) {
-    this.account = account;
+  public Organization(int id, String name) {
+    this.id = id;
+    this.name = name;
   }
 }

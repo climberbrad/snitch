@@ -2,6 +2,7 @@ package com.cloudability.snitch.api;
 
 import com.google.common.collect.ImmutableList;
 
+import com.cloudability.snitch.dao.OrgDao;
 import com.cloudability.snitch.model.Chart;
 import com.cloudability.snitch.model.Graph;
 import com.cloudability.snitch.model.GraphType;
@@ -21,6 +22,11 @@ import javax.ws.rs.core.Response;
 @Path("/v1")
 @Produces({MediaType.APPLICATION_JSON})
 public class SnitchResource {
+  private final OrgDao orgDao;
+
+  public SnitchResource(OrgDao orgDao) {
+    this.orgDao = orgDao;
+  }
 
   private static final String[] ALL_MONTHS_CATEGORY =
       new String[]{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -28,6 +34,12 @@ public class SnitchResource {
   @GET
   public Response healthCheck() {
     return Response.ok().entity("Shhhhhh!").build();
+  }
+
+  @GET
+  @Path("/orgs")
+  public Response getOrgs() {
+    return Response.ok().entity(orgDao.getActiveOrgs()).build();
   }
 
   @GET

@@ -15,7 +15,9 @@ import com.cloudability.snitch.model.Title;
 import com.cloudability.snitch.model.XAxis;
 import com.cloudability.streams.Gullectors;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
@@ -31,6 +33,7 @@ import javax.ws.rs.core.Response;
 public class SnitchResource {
   private final OrgDao orgDao;
   private final AnkenyDao ankenyDao;
+  private static final Map<String, ImmutableList<Account>> accountCache = new HashMap<>();
 
   public SnitchResource(OrgDao orgDao, AnkenyDao ankenyDao) {
     this.orgDao = orgDao;
@@ -57,16 +60,18 @@ public class SnitchResource {
   @GET
   @Path("/org/{orgId}/logins")
   public Response getOrg(@PathParam("orgId") String orgId) {
+    ImmutableList<Account> accounts = getAccounts(orgId);
 
-    ImmutableList seriesData = ImmutableList.of(
-        new SeriesData("7777-7777-7777", getDataPoints(12)),
-        new SeriesData("1234-5678-9876", getDataPoints(12)));
+    ImmutableList.Builder seriesDataBuilder = ImmutableList.builder();
+    for(Account account : accounts) {
+      seriesDataBuilder.add(new SeriesData(account.accountIdentifier, getDataPoints(12)));
+    }
 
     Graph graph = new Graph(
         new Chart(GraphType.column),
         new Title("Number of Logins"),
         new XAxis(ALL_MONTHS_CATEGORY),
-        seriesData);
+        seriesDataBuilder.build());
 
     return Response.ok().entity(graph)
         .header("Access-Control-Allow-Origin", "*")
@@ -89,7 +94,7 @@ public class SnitchResource {
   }
 
   private ImmutableList<SeriesData> getAwsSpendData(String orgId) {
-    ImmutableList<Account> accounts = orgDao.getAccounts(orgId);
+    ImmutableList<Account> accounts = getAccounts(orgId);
 
     String primaryAccount = accounts.stream()
         .filter(account -> account.isPrimary)
@@ -117,6 +122,14 @@ public class SnitchResource {
         new SeriesData(primaryAccount, dataPoints));
   }
 
+  private ImmutableList<Account> getAccounts(String orgId) {
+    ImmutableList<Account> accounts = accountCache.get(orgId);
+    if(accounts == null) {
+      accounts = orgDao.getAccounts(orgId);
+      accountCache.put(orgId, accounts);
+    }
+    return accounts;
+  }
 
   private double[] getDataPoints(int numPoints) {
     double result[] = new double[numPoints];

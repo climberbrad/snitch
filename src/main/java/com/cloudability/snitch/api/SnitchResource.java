@@ -91,7 +91,7 @@ public class SnitchResource {
 
   private double[] getAwsSpendFromAnkeny(String orgId) {
     Optional<AnkenyResponse> response =
-        ankenyDao.getMontlyCostData(orgId, "accountId", orgDao.getLinkedAccounts(orgId));
+        ankenyDao.getMontlyCostData(Integer.valueOf(orgId), 1, "2", orgDao.getLinkedAccounts(orgId));
 
     List<RecordList> records = response.get().records;
     double[] result = new double[records.size()];

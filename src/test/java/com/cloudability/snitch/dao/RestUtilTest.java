@@ -3,13 +3,10 @@ package com.cloudability.snitch.dao;
 import com.google.common.collect.ImmutableList;
 
 import com.cloudability.snitch.model.Ankeny.AnkenyPostData;
-import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.Test;
-
-import java.util.Optional;
 
 public class RestUtilTest {
   private final String ANKENY_URL = " http://ankeny.s.cloudability.org/cost/report";
@@ -59,8 +56,8 @@ public class RestUtilTest {
         .withEnd_at("2016-01-31")
         .build();
 
-    Optional<AnkenyResponse> response = RestUtil.httpPostRequest(AnkenyDao.ANKENY_BASE_URL, data);
-    System.out.println(MAPPER.writeValueAsString(response.get()));
+//    Optional<AnkenyResponse> response = RestUtil.httpPostRequest(AnkenyDao.ANKENY_BASE_URL, data);
+//    System.out.println(MAPPER.writeValueAsString(response.get()));
 
   }
 

@@ -32,6 +32,25 @@ public class OrgDao {
     this.connectionManager = connectionManager;
   }
 
+  public ImmutableList<String> getLinkedAccounts(String orgId) {
+    ImmutableList.Builder<String> linkedAccountBuilder = ImmutableList.builder();
+
+    try (Connection conn = connectionManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(SELECT_ACCOUNTS)) {
+      stmt.setString(1, orgId);
+
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          String accountIdentifier = rs.getString(3);
+          linkedAccountBuilder.add(accountIdentifier);
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Unable to get Active Orgs", ex);
+    }
+    return linkedAccountBuilder.build();
+  }
+
   public ImmutableList<Organization> getActiveOrgs() {
     ImmutableList.Builder<Organization> organizationBuilder = ImmutableList.builder();
 

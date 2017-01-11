@@ -8,7 +8,11 @@ import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
 import java.util.Optional;
 
 public class AnkenyDao {
-  public static final String ANKENY_BASE_URL = "";
+  public final String ankenyBaseUrl;
+
+  public AnkenyDao(String ankenyBaseUrl) {
+    this.ankenyBaseUrl = ankenyBaseUrl;
+  }
 
   public Optional<AnkenyResponse> getMontlyCostData(
       int orgId,
@@ -28,6 +32,6 @@ public class AnkenyDao {
         .withEnd_at("2016-12-31")
         .build();
 
-    return RestUtil.httpPostRequest(ANKENY_BASE_URL, data);
+    return RestUtil.httpPostRequest(ankenyBaseUrl, data);
   }
 }

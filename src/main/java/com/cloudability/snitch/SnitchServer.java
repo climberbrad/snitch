@@ -23,12 +23,13 @@ public class SnitchServer extends CloudabilityApp {
 
     DatabaseConfig databaseConfig = new DatabaseConfig(configuration);
     SnitchDbConnectionManager connectionManager = new SnitchDbConnectionManager(databaseConfig);
+    String ankenyBaseUrl = configuration.getString("ankeny.baseUrl");
 
     cldyServiceBuilder
         .withAppName("Snitch")
         .withJsonMapper(MAPPER)
         .withServices(connectionManager)
-        .withResource(new SnitchResource(new OrgDao(connectionManager), new AnkenyDao()));
+        .withResource(new SnitchResource(new OrgDao(connectionManager), new AnkenyDao(ankenyBaseUrl)));
   }
 
   public static void main(String... args) throws Exception {

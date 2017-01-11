@@ -20,6 +20,14 @@ public class OrgDao {
       + "FROM organizations "
       + "WHERE subscription_state='active'";
 
+  private static final String SELECT_ACCOUNTS = "SELECT "
+      + "orgs.name, orgs.id AS org_id, sa.id AS account_id, ca.account_identifier "
+      + "FROM organizations AS orgs  "
+      + "JOIN credentials AS creds ON orgs.id = creds.organization_id "
+      + "JOIN credential_accounts AS ca ON ca.credential_id = creds.id "
+      + "JOIN service_accounts AS sa ON sa.account_identifier = ca.account_identifier "
+      + "WHERE orgs.id = ?";
+
   public OrgDao(SnitchDbConnectionManager connectionManager) {
     this.connectionManager = connectionManager;
   }

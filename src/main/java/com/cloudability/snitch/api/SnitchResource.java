@@ -39,7 +39,10 @@ public class SnitchResource {
   @GET
   @Path("/orgs")
   public Response getOrgs() {
-    return Response.ok().entity(orgDao.getActiveOrgs()).build();
+    return Response.ok()
+        .entity(orgDao.getActiveOrgs())
+        .header("Access-Control-Allow-Origin", "*")
+        .build();
   }
 
   @GET

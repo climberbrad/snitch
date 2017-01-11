@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.cloudability.snitch.dao.AnkenyDao;
 import com.cloudability.snitch.dao.OrgDao;
+import com.cloudability.snitch.model.Account;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
 import com.cloudability.snitch.model.Ankeny.RecordList;
 import com.cloudability.snitch.model.Chart;
@@ -12,6 +13,7 @@ import com.cloudability.snitch.model.GraphType;
 import com.cloudability.snitch.model.SeriesData;
 import com.cloudability.snitch.model.Title;
 import com.cloudability.snitch.model.XAxis;
+import com.cloudability.streams.Gullectors;
 
 import java.util.List;
 import java.util.Optional;
@@ -90,8 +92,22 @@ public class SnitchResource {
   }
 
   private double[] getAwsSpendFromAnkeny(String orgId) {
+    ImmutableList<Account> accounts = orgDao.getAccounts(orgId);
+
+    String primaryAccount = accounts.stream()
+        .filter(account -> account.isPrimary)
+        .map(account -> account.accountIdentifier)
+        .findFirst().get();
+
+    ImmutableList<String> linkedAccounts = accounts.stream()
+        .filter(account -> account.isPrimary == false)
+        .map(account -> account.accountIdentifier)
+        .collect(Gullectors.toImmutableList());
+
+    int groupId = accounts.stream().map(account -> account.groupId).findFirst().get();
+
     Optional<AnkenyResponse> response =
-        ankenyDao.getMontlyCostData(Integer.valueOf(orgId), 1, "2", orgDao.getLinkedAccounts(orgId));
+        ankenyDao.getMontlyCostData(Integer.valueOf(orgId),groupId, primaryAccount, linkedAccounts);
 
     List<RecordList> records = response.get().records;
     double[] result = new double[records.size()];

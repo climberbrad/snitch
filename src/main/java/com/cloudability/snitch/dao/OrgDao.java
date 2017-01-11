@@ -2,6 +2,7 @@ package com.cloudability.snitch.dao;
 
 import com.google.common.collect.ImmutableList;
 
+import com.cloudability.snitch.model.Account;
 import com.cloudability.snitch.model.Organization;
 
 import org.apache.logging.log4j.LogManager;
@@ -20,20 +21,19 @@ public class OrgDao {
       + "FROM organizations "
       + "WHERE subscription_state='active'";
 
-  private static final String SELECT_ACCOUNTS = "SELECT "
-      + "orgs.name, orgs.id AS org_id, sa.id AS account_id, ca.account_identifier "
+  private static final String SELECT_ACCOUNTS = "SELECT orgs.group_id, ca.account_identifier, ca.is_primary "
       + "FROM organizations AS orgs  "
       + "JOIN credentials AS creds ON orgs.id = creds.organization_id "
       + "JOIN credential_accounts AS ca ON ca.credential_id = creds.id "
       + "JOIN service_accounts AS sa ON sa.account_identifier = ca.account_identifier "
-      + "WHERE orgs.id = ?";
+      + "WHERE orgs.id =?";
 
   public OrgDao(SnitchDbConnectionManager connectionManager) {
     this.connectionManager = connectionManager;
   }
 
-  public ImmutableList<String> getLinkedAccounts(String orgId) {
-    ImmutableList.Builder<String> linkedAccountBuilder = ImmutableList.builder();
+  public ImmutableList<Account> getAccounts(String orgId) {
+    ImmutableList.Builder<Account> accountBuilder = ImmutableList.builder();
 
     try (Connection conn = connectionManager.getConnection();
          PreparedStatement stmt = conn.prepareStatement(SELECT_ACCOUNTS)) {
@@ -41,14 +41,16 @@ public class OrgDao {
 
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          String accountIdentifier = rs.getString(3);
-          linkedAccountBuilder.add(accountIdentifier);
+          int groupId = rs.getInt(1);
+          String accountIdentifier = rs.getString(2);
+          Boolean isPrimary = rs.getBoolean(3);
+          accountBuilder.add(new Account(groupId, accountIdentifier, isPrimary));
         }
       }
     } catch (Exception ex) {
       log.error("Unable to get Active Orgs", ex);
     }
-    return linkedAccountBuilder.build();
+    return accountBuilder.build();
   }
 
   public ImmutableList<Organization> getActiveOrgs() {

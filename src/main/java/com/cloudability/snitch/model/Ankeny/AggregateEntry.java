@@ -9,12 +9,4 @@ public class AggregateEntry {
 
   public AggregateEntry() {
   }
-
-  public AggregateEntry(String name, String min, String max, String sum, String count) {
-    this.name = name;
-    this.min = min;
-    this.max = max;
-    this.sum = sum;
-    this.count = count;
-  }
 }

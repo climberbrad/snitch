@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.cloudability.snitch.dao.AnkenyDao;
 import com.cloudability.snitch.dao.OrgDao;
+import com.cloudability.snitch.dao.RedshiftDao;
 import com.cloudability.snitch.model.Account;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
 import com.cloudability.snitch.model.Ankeny.RecordList;
@@ -12,6 +13,7 @@ import com.cloudability.snitch.model.Graph;
 import com.cloudability.snitch.model.GraphType;
 import com.cloudability.snitch.model.SeriesData;
 import com.cloudability.snitch.model.Title;
+import com.cloudability.snitch.model.UserLogins;
 import com.cloudability.snitch.model.XAxis;
 import com.cloudability.streams.Gullectors;
 
@@ -33,11 +35,13 @@ import javax.ws.rs.core.Response;
 public class SnitchResource {
   private final OrgDao orgDao;
   private final AnkenyDao ankenyDao;
+  private final RedshiftDao redshiftDao;
   private static final Map<String, ImmutableList<Account>> accountCache = new HashMap<>();
 
-  public SnitchResource(OrgDao orgDao, AnkenyDao ankenyDao) {
+  public SnitchResource(OrgDao orgDao, AnkenyDao ankenyDao, RedshiftDao redshiftDao) {
     this.orgDao = orgDao;
     this.ankenyDao = ankenyDao;
+    this.redshiftDao = redshiftDao;
   }
 
   private static final String[] ALL_MONTHS_CATEGORY =
@@ -60,16 +64,16 @@ public class SnitchResource {
   @GET
   @Path("/org/{orgId}/logins")
   public Response getOrg(@PathParam("orgId") String orgId) {
-    ImmutableList<Account> accounts = getAccounts(orgId);
+    ImmutableList<UserLogins> loginData = redshiftDao.getLoginData(orgId);
 
     ImmutableList.Builder seriesDataBuilder = ImmutableList.builder();
-    for(Account account : accounts) {
-      seriesDataBuilder.add(new SeriesData(account.accountIdentifier, getDataPoints(12)));
+    for(UserLogins loginStats : loginData) {
+      seriesDataBuilder.add(new SeriesData(loginStats.userId, loginStats.getDataPoints()));
     }
 
     Graph graph = new Graph(
         new Chart(GraphType.column),
-        new Title("Number of Logins"),
+        new Title("Logins per UserId"),
         new XAxis(ALL_MONTHS_CATEGORY),
         seriesDataBuilder.build());
 

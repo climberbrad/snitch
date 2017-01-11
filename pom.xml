@@ -44,6 +44,11 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.39</version>
         </dependency>
+        <dependency>
+            <groupId>com.amazon</groupId>
+            <artifactId>redshift.jdbc42</artifactId>
+            <version>1.2.1.1001</version>
+        </dependency>
         <!-- TEST -->
         <dependency>
             <groupId>junit</groupId>

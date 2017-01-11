@@ -2,7 +2,7 @@ package com.cloudability.snitch.dao;
 
 import com.google.common.util.concurrent.AbstractIdleService;
 
-import com.cloudability.snitch.config.DatabaseConfig;
+import com.cloudability.snitch.config.ConnectionConfiguration;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -17,15 +17,16 @@ public class SnitchDbConnectionManager extends AbstractIdleService {
   private static final Logger log = LogManager.getLogger();
   private final HikariDataSource dataSource;
 
-  public SnitchDbConnectionManager(final DatabaseConfig databaseConfig) {
+  public SnitchDbConnectionManager(final ConnectionConfiguration jdbcConfig) {
   HikariConfig hikariConfig = new HikariConfig();
-    hikariConfig.setMaximumPoolSize(databaseConfig.connectionPoolSize);
-    hikariConfig.setDataSourceClassName(databaseConfig.driver);
-    hikariConfig.addDataSourceProperty("serverName", databaseConfig.hostname);
-    hikariConfig.addDataSourceProperty("port", databaseConfig.port);
-    hikariConfig.addDataSourceProperty("databaseName", databaseConfig.dbName);
-    hikariConfig.addDataSourceProperty("user", databaseConfig.user);
-    hikariConfig.addDataSourceProperty("password", databaseConfig.password);
+    hikariConfig.setMaximumPoolSize(jdbcConfig.getConnectionPoolSize());
+//    hikariConfig.setDataSourceClassName(jdbcConfig.getDriver());
+    hikariConfig.setJdbcUrl(jdbcConfig.getUrl() );
+    hikariConfig.addDataSourceProperty("serverName", jdbcConfig.getHostname());
+    hikariConfig.addDataSourceProperty("port", jdbcConfig.getPort());
+    hikariConfig.addDataSourceProperty("databaseName", jdbcConfig.getDbName());
+    hikariConfig.addDataSourceProperty("user", jdbcConfig.getUser());
+    hikariConfig.addDataSourceProperty("password", jdbcConfig.getPassword());
     hikariConfig.addDataSourceProperty("serverTimezone", "UTC");
     hikariConfig.addDataSourceProperty("useLegacyDatetimeCode", false);
     hikariConfig.addDataSourceProperty("cachePrepStmts", "true");
@@ -38,9 +39,9 @@ public class SnitchDbConnectionManager extends AbstractIdleService {
     hikariConfig.setConnectionTestQuery("SELECT current_timestamp");
 
   HikariDataSource dataSource = new HikariDataSource(hikariConfig);
-    dataSource.setConnectionTimeout(databaseConfig.connectionTimeout);
+    dataSource.setConnectionTimeout(jdbcConfig.getConnectionTimeout());
     this.dataSource = dataSource;
-    log.debug("Datasource Created for: {}", databaseConfig.dbName);
+    log.debug("Datasource Created for: {}", jdbcConfig.getDbName());
 }
 
   public Connection getConnection() throws SQLException {

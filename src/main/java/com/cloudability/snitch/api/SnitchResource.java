@@ -77,21 +77,18 @@ public class SnitchResource {
   @Path("/org/{orgId}/spend")
   public Response getSpend(@PathParam("orgId") String orgId) {
 
-    ImmutableList seriesData = ImmutableList.of(
-        new SeriesData("7777-7777-7777", getAwsSpendFromAnkeny(orgId)));
-
     Graph graph = new Graph(
         new Chart(GraphType.line),
         new Title("Total Spend"),
         new XAxis(ALL_MONTHS_CATEGORY),
-        seriesData);
+        getAwsSpendData(orgId));
 
     return Response.ok().entity(graph)
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 
-  private double[] getAwsSpendFromAnkeny(String orgId) {
+  private ImmutableList<SeriesData> getAwsSpendData(String orgId) {
     ImmutableList<Account> accounts = orgDao.getAccounts(orgId);
 
     String primaryAccount = accounts.stream()
@@ -110,13 +107,14 @@ public class SnitchResource {
         ankenyDao.getMontlyCostData(Integer.valueOf(orgId),groupId, primaryAccount, linkedAccounts);
 
     List<RecordList> records = response.get().records;
-    double[] result = new double[records.size()];
+    double[] dataPoints = new double[records.size()];
 
     for(int i=0;i<records.size();i++) {
-      result[i] = Double.valueOf(records.get(i).entry.sum).doubleValue();
+      dataPoints[i] = Double.valueOf(records.get(i).entry.sum).doubleValue();
     }
 
-    return result;
+    return ImmutableList.of(
+        new SeriesData(primaryAccount, dataPoints));
   }
 
 

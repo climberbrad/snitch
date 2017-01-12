@@ -8,7 +8,9 @@ import com.cloudability.snitch.dao.HibikiDao;
 import com.cloudability.snitch.dao.OrgDao;
 import com.cloudability.snitch.dao.RedshiftDao;
 import com.cloudability.snitch.model.Account;
+import com.cloudability.snitch.model.Ankeny.AnkenyCostPerServiceResponse;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
+import com.cloudability.snitch.model.Ankeny.MultiRecordList;
 import com.cloudability.snitch.model.Ankeny.RecordList;
 import com.cloudability.snitch.model.Chart;
 import com.cloudability.snitch.model.Graph;
@@ -24,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -113,27 +114,47 @@ public class SnitchResource {
     int activeRiCount = alexandriaDao.getActiveRiCount(accounts);
     double savingsFromPlan = hibikiDao.getPlan(accounts);
 
-    return Response.ok().entity(new OrgDetail(orgId, activeRiCount, accounts.size(), savingsFromPlan))
+    // subscription start for primary account
+    String subscriptionStartsAt = accounts.stream()
+        .filter(account -> account.isPrimary)
+        .map(account -> account.subscriptionStartsAt)
+        .findFirst().get();
+
+    return Response.ok().entity(new OrgDetail(orgId, subscriptionStartsAt, activeRiCount, accounts.size(), savingsFromPlan))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 
   @GET
   @Path("/org/{orgId}/spend")
-  public Response getSpend(@PathParam("orgId") String orgId) {
+  public Response getTotalSpend(@PathParam("orgId") String orgId) {
 
     Graph graph = new Graph(
         new Chart(GraphType.line),
         new Title("Total Spend"),
         new XAxis(ALL_MONTHS_CATEGORY),
-        getAwsSpendData(orgId));
+        getAwsTotalSpendData(orgId));
 
     return Response.ok().entity(graph)
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 
-  private ImmutableList<SeriesData> getAwsSpendData(String orgId) {
+  @GET
+  @Path("/org/{orgId}/spendPerService")
+  public Response getSpendPerService(@PathParam("orgId") String orgId) {
+    Graph graph = new Graph(
+        new Chart(GraphType.line),
+        new Title("Total Spend"),
+        new XAxis(ALL_MONTHS_CATEGORY),
+        getAwsSpendPerServiceData(orgId));
+
+    return Response.ok().entity(graph)
+        .header("Access-Control-Allow-Origin", "*")
+        .build();
+  }
+
+  private ImmutableList<SeriesData> getAwsTotalSpendData(String orgId) {
     ImmutableList<Account> accounts = getAccounts(orgId);
 
     String primaryAccount = accounts.stream()
@@ -149,7 +170,7 @@ public class SnitchResource {
     int groupId = accounts.stream().map(account -> account.groupId).findFirst().get();
 
     Optional<AnkenyResponse> response =
-        ankenyDao.getMontlyCostData(Integer.valueOf(orgId),groupId, primaryAccount, linkedAccounts);
+        ankenyDao.getTotalMontlyCostData(Integer.valueOf(orgId),groupId, primaryAccount, linkedAccounts);
 
     List<RecordList> records = response.get().records;
     double[] dataPoints = new double[records.size()];
@@ -162,6 +183,46 @@ public class SnitchResource {
         new SeriesData(primaryAccount, dataPoints));
   }
 
+  private ImmutableList<SeriesData> getAwsSpendPerServiceData(String orgId) {
+    ImmutableList<Account> accounts = getAccounts(orgId);
+
+    String primaryAccount = accounts.stream()
+        .filter(account -> account.isPrimary)
+        .map(account -> account.accountIdentifier)
+        .findFirst().get();
+
+    ImmutableList<String> linkedAccounts = accounts.stream()
+        .filter(account -> account.isPrimary == false)
+        .map(account -> account.accountIdentifier)
+        .collect(Gullectors.toImmutableList());
+
+    int groupId = accounts.stream().map(account -> account.groupId).findFirst().get();
+
+    Optional<AnkenyCostPerServiceResponse> response =
+        ankenyDao.getMontlyCostPerService(Integer.valueOf(orgId),groupId, primaryAccount, linkedAccounts);
+
+
+    List<MultiRecordList> records = response.get().records;
+
+    Map<String, double[]> serviceMonthlyData = new HashMap<>();
+
+    for(MultiRecordList record: records) {
+      String awsServiceName = record.serviceName;
+      int index = Integer.valueOf(record.index).intValue();
+
+      if(serviceMonthlyData.get(awsServiceName) == null) {
+        serviceMonthlyData.put(awsServiceName, new double[12]);
+      }
+      serviceMonthlyData.get(awsServiceName)[index-1] = Double.valueOf(record.entry.sum).doubleValue();
+    }
+
+    ImmutableList.Builder<SeriesData> seriesDataBuilder = ImmutableList.builder();
+    for(String serviceName : serviceMonthlyData.keySet()) {
+      seriesDataBuilder.add(new SeriesData(serviceName, serviceMonthlyData.get(serviceName)));
+    }
+    return seriesDataBuilder.build();
+  }
+
   private ImmutableList<Account> getAccounts(String orgId) {
     ImmutableList<Account> accounts = accountCache.get(orgId);
     if(accounts == null) {
@@ -169,20 +230,5 @@ public class SnitchResource {
       accountCache.put(orgId, accounts);
     }
     return accounts;
-  }
-
-  private double[] getDataPoints(int numPoints) {
-    double result[] = new double[numPoints];
-    for (int i = 0; i < numPoints; i++) {
-      result[i] = randomDouble();
-    }
-    return result;
-  }
-
-  private double randomDouble() {
-    Random random = new Random();
-    int rangeMin = 1;
-    int rangeMax = 100;
-    return rangeMin + (rangeMax - rangeMin) * random.nextDouble();
   }
 }

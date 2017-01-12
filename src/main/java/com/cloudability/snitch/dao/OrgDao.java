@@ -21,7 +21,7 @@ public class OrgDao {
       + "FROM organizations "
       + "WHERE subscription_state='active'";
 
-  private static final String SELECT_ACCOUNTS = "SELECT orgs.group_id, ca.account_identifier, ca.is_primary "
+  private static final String SELECT_ACCOUNTS = "SELECT subscription_starts_at, orgs.group_id, ca.account_identifier, ca.is_primary "
       + "FROM organizations AS orgs  "
       + "JOIN credentials AS creds ON orgs.id = creds.organization_id "
       + "JOIN credential_accounts AS ca ON ca.credential_id = creds.id "
@@ -41,10 +41,11 @@ public class OrgDao {
 
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          int groupId = rs.getInt(1);
-          String accountIdentifier = rs.getString(2);
-          Boolean isPrimary = rs.getBoolean(3);
-          accountBuilder.add(new Account(groupId, accountIdentifier, isPrimary));
+          String subscriptionStartsAt = rs.getString(1);
+          int groupId = rs.getInt(2);
+          String accountIdentifier = rs.getString(3);
+          Boolean isPrimary = rs.getBoolean(4);
+          accountBuilder.add(new Account(subscriptionStartsAt, groupId, accountIdentifier, isPrimary));
         }
       }
     } catch (Exception ex) {

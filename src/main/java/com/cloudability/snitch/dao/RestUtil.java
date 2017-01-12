@@ -4,6 +4,7 @@ import static com.cloudability.snitch.SnitchServer.MAPPER;
 
 import com.google.common.io.CharStreams;
 
+import com.cloudability.snitch.model.Ankeny.AnkenyCostPerServiceResponse;
 import com.cloudability.snitch.model.Ankeny.AnkenyPostData;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,7 +28,7 @@ import java.util.Optional;
 public class RestUtil {
   private static final Logger log = LogManager.getLogger();
 
-  public static Optional<AnkenyResponse> httpPostRequest(String url, AnkenyPostData post) {
+  public static Optional<AnkenyResponse> ankenyTotalSpendRequest(String url, AnkenyPostData post) {
     try {
       StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
       return httpPostRequest(url, entity, AnkenyResponse.class);
@@ -36,6 +37,17 @@ public class RestUtil {
     }
     return Optional.empty();
   }
+
+  public static Optional<AnkenyCostPerServiceResponse> multiServiceAnkenyPostRequest(String url, AnkenyPostData post) {
+    try {
+      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
+      return httpPostRequest(url, entity, AnkenyCostPerServiceResponse.class);
+    } catch (Exception ex) {
+      log.error("Unable to make Ankeny request", ex);
+    }
+    return Optional.empty();
+  }
+
 
   public static <T> Optional<T> httpGetRequest(final String url, final Class<T> expectedResultType) {
     CloseableHttpResponse response = null;

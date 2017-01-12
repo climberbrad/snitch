@@ -2,6 +2,7 @@ package com.cloudability.snitch.dao;
 
 import com.google.common.collect.ImmutableList;
 
+import com.cloudability.snitch.model.Ankeny.AnkenyCostPerServiceResponse;
 import com.cloudability.snitch.model.Ankeny.AnkenyPostData;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
 
@@ -14,7 +15,7 @@ public class AnkenyDao {
     this.ankenyBaseUrl = ankenyBaseUrl;
   }
 
-  public Optional<AnkenyResponse> getMontlyCostData(
+  public Optional<AnkenyResponse> getTotalMontlyCostData(
       int orgId,
       int groupId,
       String payerAccountId,
@@ -31,7 +32,26 @@ public class AnkenyDao {
         .withStart_at("2016-01-01")
         .withEnd_at("2016-12-31")
         .build();
+    return RestUtil.ankenyTotalSpendRequest(ankenyBaseUrl, data);
+  }
 
-    return RestUtil.httpPostRequest(ankenyBaseUrl, data);
+  public Optional<AnkenyCostPerServiceResponse> getMontlyCostPerService(
+      int orgId,
+      int groupId,
+      String payerAccountId,
+      ImmutableList<String> acccountIdentifiers) {
+
+    AnkenyPostData data = AnkenyPostData.newBuilder()
+        .withAccount_identifiers(ImmutableList.of(payerAccountId))
+        .withDimensions(ImmutableList.of("service_name", "month"))
+        .withMetrics(ImmutableList.of("invoiced_cost"))
+        .withOrganization_id(orgId)
+        .withGroup_id(groupId)
+        .withLinked_account_identifiers(acccountIdentifiers)
+        .withBackend("olap")
+        .withStart_at("2016-01-01")
+        .withEnd_at("2016-12-31")
+        .build();
+    return RestUtil.multiServiceAnkenyPostRequest(ankenyBaseUrl, data);
   }
 }

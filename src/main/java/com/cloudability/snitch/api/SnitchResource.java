@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.cloudability.snitch.dao.AlexandriaDao;
 import com.cloudability.snitch.dao.AnkenyDao;
+import com.cloudability.snitch.dao.HibikiDao;
 import com.cloudability.snitch.dao.OrgDao;
 import com.cloudability.snitch.dao.RedshiftDao;
 import com.cloudability.snitch.model.Account;
@@ -39,13 +40,21 @@ public class SnitchResource {
   private final AnkenyDao ankenyDao;
   private final RedshiftDao redshiftDao;
   private final AlexandriaDao alexandriaDao;
+  private final HibikiDao hibikiDao;
   private static final Map<String, ImmutableList<Account>> accountCache = new HashMap<>();
 
-  public SnitchResource(OrgDao orgDao, AnkenyDao ankenyDao, RedshiftDao redshiftDao, AlexandriaDao alexandriaDao) {
+  public SnitchResource(
+      OrgDao orgDao,
+      AnkenyDao ankenyDao,
+      RedshiftDao redshiftDao,
+      AlexandriaDao alexandriaDao,
+      HibikiDao hibikiDao)
+  {
     this.orgDao = orgDao;
     this.ankenyDao = ankenyDao;
     this.redshiftDao = redshiftDao;
     this.alexandriaDao = alexandriaDao;
+    this.hibikiDao = hibikiDao;
   }
 
   private static final String[] ALL_MONTHS_CATEGORY =
@@ -54,6 +63,17 @@ public class SnitchResource {
   @GET
   public Response healthCheck() {
     return Response.ok().entity("Shhhhhh!").build();
+  }
+
+  @GET
+  @Path("/org/{orgId}/hibiki")
+  public Response getPlan(@PathParam("orgId") String orgId) {
+    ImmutableList<Account> accounts = getAccounts(orgId);
+
+    return Response.ok()
+        .entity(hibikiDao.getPlan(accounts))
+        .header("Access-Control-Allow-Origin", "*")
+        .build();
   }
 
   @GET
@@ -77,7 +97,7 @@ public class SnitchResource {
 
     Graph graph = new Graph(
         new Chart(GraphType.column),
-        new Title("Logins per UserId"),
+        new Title("Page Views"),
         new XAxis(ALL_MONTHS_CATEGORY),
         seriesDataBuilder.build());
 
@@ -91,8 +111,9 @@ public class SnitchResource {
   public Response getReservations(@PathParam("orgId") String orgId) {
     ImmutableList<Account> accounts = getAccounts(orgId);
     int activeRiCount = alexandriaDao.getActiveRiCount(accounts);
+    double savingsFromPlan = hibikiDao.getPlan(accounts);
 
-    return Response.ok().entity(new OrgDetail(orgId, activeRiCount, accounts.size()))
+    return Response.ok().entity(new OrgDetail(orgId, activeRiCount, accounts.size(), savingsFromPlan))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

@@ -98,7 +98,7 @@ public class SnitchResource {
 
     Graph graph = new Graph(
         new Chart(GraphType.column),
-        new Title("Page Views"),
+        new Title("Logins"),
         new XAxis(ALL_MONTHS_CATEGORY),
         seriesDataBuilder.build());
 
@@ -144,8 +144,8 @@ public class SnitchResource {
   @Path("/org/{orgId}/spendPerService")
   public Response getSpendPerService(@PathParam("orgId") String orgId) {
     Graph graph = new Graph(
-        new Chart(GraphType.line),
-        new Title("Total Spend"),
+        new Chart(GraphType.area),
+        new Title("Spend Per Service"),
         new XAxis(ALL_MONTHS_CATEGORY),
         getAwsSpendPerServiceData(orgId));
 

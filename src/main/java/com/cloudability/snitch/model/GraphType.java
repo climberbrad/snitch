@@ -2,7 +2,8 @@ package com.cloudability.snitch.model;
 
 public enum GraphType {
   line,
-  column;
+  column,
+  area;
 
   @Override
   public String toString() {

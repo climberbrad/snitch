@@ -17,14 +17,22 @@ public class RedshiftDao {
   private static final Logger log = LogManager.getLogger();
   private final SnitchDbConnectionManager connectionManager;
 
-  private static final String SELECT_LOGINS = "SELECT "
-      + "user_id, sum(sign_in_count) as logins, date_part('month', timestamp) as month "
-      + "FROM success.users_login "
+//  private static final String SELECT_LOGINS = "SELECT "
+//      + "user_id, sum(sign_in_count) as logins, date_part('month', timestamp) as month "
+//      + "FROM success.users_login "
+//      + "where env = 'production' "
+//      + "and org_id = ? "
+//      + "and timestamp > '2016-01-01' "
+//      + "and timestamp < '2016-12-31' "
+//      + "group by month, user_id";
+
+  private static final String SELECT_LOGINS = "SELECT name, count(name), date_part('month', sent_at) as month "
+      + "FROM success.dashboard_index "
       + "where env = 'production' "
-      + "and org_id = ? "
-      + "and timestamp > '2016-01-01' "
-      + "and timestamp < '2016-12-31' "
-      + "group by month, user_id";
+      + "and org_id =  ? "
+      + "and sent_at > '2016-01-01' "
+      + "and sent_at < '2016-12-31' "
+      + "group by month, name";
 
   public RedshiftDao(SnitchDbConnectionManager connectionManager) {
     this.connectionManager = connectionManager;
@@ -40,14 +48,14 @@ public class RedshiftDao {
 
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          String userId = rs.getString(1);
+          String userName = rs.getString(1);
           int numLogins = rs.getInt(2);
           int month = rs.getInt(3);
 
-          UserLogins loginStat = loginsMap.get(userId);
+          UserLogins loginStat = loginsMap.get(userName);
           if(loginStat == null) {
-            loginStat = new UserLogins(userId);
-            loginsMap.put(userId, loginStat);
+            loginStat = new UserLogins(userName);
+            loginsMap.put(userName, loginStat);
           }
           loginStat.addMontlyCount(month, numLogins);
         }

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -36,7 +37,42 @@ public class RestUtil {
     return Optional.empty();
   }
 
-  private static <T> Optional<T> httpPostRequest(
+  public static <T> Optional<T> httpGetRequest(final String url, final Class<T> expectedResultType) {
+    CloseableHttpResponse response = null;
+    String body;
+    try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+      HttpGet httpGet = new HttpGet(url);
+      httpGet.addHeader(HttpHeaders.ACCEPT, "application/json");
+      response = httpClient.execute(httpGet);
+      body = CharStreams.toString(new InputStreamReader(response.getEntity().getContent()));
+    } catch (IOException ex) {
+      throw new RuntimeException("Snitch Server not available", ex);
+    } finally {
+      if (response != null) {
+        try {
+          response.close();
+        } catch (IOException ex) {
+          log.error(ex);
+        }
+      }
+    }
+    JsonNode json = null;
+    try {
+      json = MAPPER.readTree(body);
+    } catch (IOException e) {
+      log.error("Failed to parse as JSON.", response, e);
+    }
+
+    try {
+      T result = MAPPER.treeToValue(json, expectedResultType);
+      return Optional.ofNullable(result);
+    } catch (Exception ex) {
+      log.error(body, response, ex);
+    }
+    throw new IllegalStateException("Unable to get parse response");
+  }
+
+  public static <T> Optional<T> httpPostRequest(
       final String url,
       final HttpEntity entity,
       final Class<T> expectedResultType) {

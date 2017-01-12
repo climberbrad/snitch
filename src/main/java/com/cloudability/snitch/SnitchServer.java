@@ -5,6 +5,7 @@ import com.cloudability.platform.server.CloudabilityService;
 import com.cloudability.snitch.api.SnitchResource;
 import com.cloudability.snitch.config.JdbcConfig;
 import com.cloudability.snitch.config.RedshiftConfig;
+import com.cloudability.snitch.dao.AlexandriaDao;
 import com.cloudability.snitch.dao.AnkenyDao;
 import com.cloudability.snitch.dao.OrgDao;
 import com.cloudability.snitch.dao.RedshiftDao;
@@ -28,6 +29,7 @@ public class SnitchServer extends CloudabilityApp {
     SnitchDbConnectionManager redshiftConnectionManager = new SnitchDbConnectionManager(redshiftConfig);
     SnitchDbConnectionManager connectionManager = new SnitchDbConnectionManager(jdbcConfig);
     String ankenyBaseUrl = configuration.getString("ankeny.baseUrl");
+    String alexandriaBaseUrl = configuration.getString("alexandria.baseUrl");
 
     cldyServiceBuilder
         .withAppName("Snitch")
@@ -36,7 +38,8 @@ public class SnitchServer extends CloudabilityApp {
         .withResource(new SnitchResource(
             new OrgDao(connectionManager),
             new AnkenyDao(ankenyBaseUrl),
-            new RedshiftDao(redshiftConnectionManager)
+            new RedshiftDao(redshiftConnectionManager),
+            new AlexandriaDao(alexandriaBaseUrl)
         ));
   }
 

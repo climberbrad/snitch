@@ -2,6 +2,7 @@ package com.cloudability.snitch.api;
 
 import com.google.common.collect.ImmutableList;
 
+import com.cloudability.snitch.dao.AlexandriaDao;
 import com.cloudability.snitch.dao.AnkenyDao;
 import com.cloudability.snitch.dao.OrgDao;
 import com.cloudability.snitch.dao.RedshiftDao;
@@ -11,6 +12,7 @@ import com.cloudability.snitch.model.Ankeny.RecordList;
 import com.cloudability.snitch.model.Chart;
 import com.cloudability.snitch.model.Graph;
 import com.cloudability.snitch.model.GraphType;
+import com.cloudability.snitch.model.OrgDetail;
 import com.cloudability.snitch.model.SeriesData;
 import com.cloudability.snitch.model.Title;
 import com.cloudability.snitch.model.UserLogins;
@@ -36,12 +38,14 @@ public class SnitchResource {
   private final OrgDao orgDao;
   private final AnkenyDao ankenyDao;
   private final RedshiftDao redshiftDao;
+  private final AlexandriaDao alexandriaDao;
   private static final Map<String, ImmutableList<Account>> accountCache = new HashMap<>();
 
-  public SnitchResource(OrgDao orgDao, AnkenyDao ankenyDao, RedshiftDao redshiftDao) {
+  public SnitchResource(OrgDao orgDao, AnkenyDao ankenyDao, RedshiftDao redshiftDao, AlexandriaDao alexandriaDao) {
     this.orgDao = orgDao;
     this.ankenyDao = ankenyDao;
     this.redshiftDao = redshiftDao;
+    this.alexandriaDao = alexandriaDao;
   }
 
   private static final String[] ALL_MONTHS_CATEGORY =
@@ -78,6 +82,17 @@ public class SnitchResource {
         seriesDataBuilder.build());
 
     return Response.ok().entity(graph)
+        .header("Access-Control-Allow-Origin", "*")
+        .build();
+  }
+
+  @GET
+  @Path("/org/{orgId}/details")
+  public Response getReservations(@PathParam("orgId") String orgId) {
+    ImmutableList<Account> accounts = getAccounts(orgId);
+    int activeRiCount = alexandriaDao.getActiveRiCount(accounts);
+
+    return Response.ok().entity(new OrgDetail(orgId, activeRiCount, accounts.size()))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

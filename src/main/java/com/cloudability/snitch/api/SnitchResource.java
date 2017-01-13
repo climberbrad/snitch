@@ -123,6 +123,8 @@ public class SnitchResource {
 
     int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(accounts);
 
+    String planLastExecuted = redshiftDao.getLastRiPlanDate(orgId);
+
     String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(accounts));
 
 
@@ -143,7 +145,8 @@ public class SnitchResource {
             savingsFromPlan,
             lastLogin,
             numRisExpiringNextMonth,
-            dateOfLastRiPurchase))
+            dateOfLastRiPurchase,
+            planLastExecuted))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

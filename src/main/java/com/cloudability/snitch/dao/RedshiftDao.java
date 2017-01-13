@@ -34,6 +34,15 @@ public class RedshiftDao {
       + "order by sent_at desc "
       + "limit 1";
 
+  private static final String SELECT_LAST_RI_PLAN_RUN = "SELECT date(max(p.received_at)) "
+      + "FROM success.pages as p "
+      + "JOIN success.users_login as l ON p.user_id = l.user_id "
+      + "where p.received_at > '2016-12-01' "
+      + "and l.received_at > '2016-12-01' "
+      + "and path = '/reserved_instance_planner' "
+      + "and l.org_id = ? "
+      + "limit 1";
+
   public RedshiftDao(SnitchDbConnectionManager connectionManager) {
     this.connectionManager = connectionManager;
   }
@@ -87,5 +96,22 @@ public class RedshiftDao {
       log.error("Unable to get Active Orgs", ex);
     }
     return loginDate;
+  }
+
+  public String getLastRiPlanDate(String orgId) {
+    String planLastExecutedDate = "";
+    try (Connection conn = connectionManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(SELECT_LAST_RI_PLAN_RUN)) {
+      stmt.setString(1, orgId);
+
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          planLastExecutedDate = rs.getString(1).trim();
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Unable to get Active Orgs", ex);
+    }
+    return planLastExecutedDate;
   }
 }

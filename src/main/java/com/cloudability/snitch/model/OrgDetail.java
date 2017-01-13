@@ -8,6 +8,7 @@ public class OrgDetail {
   public final double savingsFromPlan;
   public final String lastLogin;
   public final int numRisExpiringNextMonth;
+  public String dateOfLastRiPurchase;
 
   public OrgDetail(
       String id,
@@ -16,7 +17,8 @@ public class OrgDetail {
       int numAccounts,
       double savingsFromPlan,
       String lastLogin,
-      int numRisExpiringNextMonth
+      int numRisExpiringNextMonth,
+      String dateOfLastRiPurchase
   ) {
     this.id = id;
     this.subscriptionStartsAt = subscriptionStartsAt;
@@ -25,5 +27,6 @@ public class OrgDetail {
     this.savingsFromPlan = savingsFromPlan;
     this.lastLogin = lastLogin;
     this.numRisExpiringNextMonth = numRisExpiringNextMonth;
+    this.dateOfLastRiPurchase = dateOfLastRiPurchase;
   }
 }

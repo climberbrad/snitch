@@ -32,7 +32,7 @@ public class AlexandriaDao {
         .map(account -> account.accountIdentifier.replace("-", ""))
         .collect(Gullectors.toImmutableList());
 
-    AlexandriaPostRequest post = new AlexandriaPostRequest(accountIdentifiers, filters);
+    AlexandriaPostRequest post = new AlexandriaPostRequest(accountIdentifiers, filters, 0);
     Optional<AlexandriaResponse> response = Optional.empty();
     try {
       StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
@@ -58,7 +58,7 @@ public class AlexandriaDao {
         .map(account -> account.accountIdentifier.replace("-", ""))
         .collect(Gullectors.toImmutableList());
 
-    AlexandriaPostRequest post = new AlexandriaPostRequest(accountIdentifiers, filters);
+    AlexandriaPostRequest post = new AlexandriaPostRequest(accountIdentifiers, filters, 0);
     Optional<AlexandriaResponse> response = Optional.empty();
     try {
       StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
@@ -68,5 +68,26 @@ public class AlexandriaDao {
     }
 
     return response.isPresent() ? response.get().aggregate.quantity : 0;
+  }
+
+  public long getDateOfLastRiPurchase(ImmutableList<Account> accounts) {
+    ImmutableList<String> filters = ImmutableList.of(
+        "state==active"
+    );
+
+    ImmutableList<String> accountIdentifiers = accounts.stream()
+        .map(account -> account.accountIdentifier.replace("-", ""))
+        .collect(Gullectors.toImmutableList());
+
+    AlexandriaPostRequest post = new AlexandriaPostRequest(accountIdentifiers, filters, 1);
+    Optional<AlexandriaResponse> response = Optional.empty();
+    try {
+      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
+      response = RestUtil.httpPostRequest(baseUrl, entity, AlexandriaResponse.class);
+    } catch (JsonProcessingException e) {
+      log.error("Unable to call Alexandria", e);
+    }
+
+    return response.isPresent() ? Long.valueOf(response.get().result.get(0).start).longValue() : 0;
   }
 }

@@ -24,6 +24,7 @@ import com.cloudability.streams.Gullectors;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,8 @@ public class SnitchResource {
   private final AlexandriaDao alexandriaDao;
   private final HibikiDao hibikiDao;
   private static final Map<String, ImmutableList<Account>> accountCache = new HashMap<>();
+
+  public final static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
   public SnitchResource(
       OrgDao orgDao,
@@ -120,6 +123,9 @@ public class SnitchResource {
 
     int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(accounts);
 
+    String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(accounts));
+
+
     String lastLogin = redshiftDao.getLatestLogin(orgId);
 
     // subscription start for primary account
@@ -136,7 +142,8 @@ public class SnitchResource {
             accounts.size(),
             savingsFromPlan,
             lastLogin,
-            numRisExpiringNextMonth))
+            numRisExpiringNextMonth,
+            dateOfLastRiPurchase))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

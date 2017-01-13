@@ -12,6 +12,9 @@ public class OrgDetail {
   public String planLastExecuted;
   public String numLoginsLastMonth;
   public String numLoginsLastTwoMonth;
+  public String numTotalPageLoads;
+  public String numPlannerPageLoads;
+  public int numCustomWidgetsCreated;
 
   public OrgDetail(
       String id,
@@ -24,7 +27,10 @@ public class OrgDetail {
       String dateOfLastRiPurchase,
       String planLastExecuted,
       String numLoginsLastMonth,
-      String numLoginsLastTwoMonth
+      String numLoginsLastTwoMonth,
+      String numTotalPageLoads,
+      String numPlannerPageLoads,
+      int numCustomWidgetsCreated
   ) {
     this.id = id;
     this.subscriptionStartsAt = subscriptionStartsAt;
@@ -37,5 +43,8 @@ public class OrgDetail {
     this.planLastExecuted = planLastExecuted;
     this.numLoginsLastMonth = numLoginsLastMonth;
     this.numLoginsLastTwoMonth = numLoginsLastTwoMonth;
+    this.numTotalPageLoads = numTotalPageLoads;
+    this.numPlannerPageLoads = numPlannerPageLoads;
+    this.numCustomWidgetsCreated = numCustomWidgetsCreated;
   }
 }

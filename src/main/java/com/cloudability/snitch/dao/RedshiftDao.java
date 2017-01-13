@@ -50,6 +50,33 @@ public class RedshiftDao {
       + "and l.org_id = ? "
       + "limit 1";
 
+  public static final String COUNT_PAGE_LOADS = "SELECT count(*) "
+      + "FROM success.pages as p "
+      + "JOIN success.users_login as l ON p.user_id = l.user_id  "
+      + "where p.received_at > '2016-12-01'  "
+      + "and l.received_at > '2016-12-01'  "
+      + "and l.org_id = ? "
+      + "limit 1";
+
+  public static final String COUNT_PLANNER_PAGE_LOADS = "SELECT count(*) "
+      + "FROM success.pages as p "
+      + "JOIN success.users_login as l ON p.user_id = l.user_id  "
+      + "where p.received_at > '2016-12-01'  "
+      + "and l.received_at > '2016-12-01'  "
+      + "and l.org_id = ? "
+      + "and path = '/reserved_instance_planner' "
+      + "limit 1";
+
+  public static final String COUNT_CUSTOM_COST_REPORTS = "SELECT count(*) "
+      + "FROM success.api_reports_costcube_create "
+      + "where org_id = ? "
+      + "limit 1";
+
+  public static final String COUNT_CUSTOM_USAGE_REPORTS = "SELECT count(*) "
+      + "FROM success.api_reports_usagecube_create "
+      + "where org_id = ? "
+      + "limit 1";
+
   public RedshiftDao(SnitchDbConnectionManager connectionManager) {
     this.connectionManager = connectionManager;
   }
@@ -113,7 +140,7 @@ public class RedshiftDao {
 
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          planLastExecutedDate = rs.getString(1).trim();
+          planLastExecutedDate = rs.getString(1);
         }
       }
     } catch (Exception ex) {
@@ -132,12 +159,78 @@ public class RedshiftDao {
 
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          numLoginsLastMonth = rs.getString(1).trim();
+          numLoginsLastMonth = rs.getString(1);
         }
       }
     } catch (Exception ex) {
       log.error("Unable to get Active Orgs", ex);
     }
     return numLoginsLastMonth;
+  }
+
+  public String getTotalPageLoads(String orgId) {
+    String numLoginsLastMonth = "";
+    try (Connection conn = connectionManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(COUNT_PAGE_LOADS)) {
+      stmt.setString(1, orgId);
+
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          numLoginsLastMonth = rs.getString(1);
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Unable to get Active Orgs", ex);
+    }
+    return numLoginsLastMonth;
+  }
+
+  public String getTotalPlanerPageLoads(String orgId) {
+    String numPlannerPageLoads = "";
+    try (Connection conn = connectionManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(COUNT_PLANNER_PAGE_LOADS)) {
+      stmt.setString(1, orgId);
+
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          numPlannerPageLoads = rs.getString(1);
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Unable to get Active Orgs", ex);
+    }
+    return numPlannerPageLoads;
+  }
+
+  public int getNumCustomWidgetsCreated(String orgId) {
+    int numCostWidgets = 0;
+    int numUSageWidgets = 0;
+
+    try (Connection conn = connectionManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(COUNT_CUSTOM_COST_REPORTS)) {
+      stmt.setString(1, orgId);
+
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          numCostWidgets = rs.getInt(1);
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Unable to get Active Orgs", ex);
+    }
+
+    try (Connection conn = connectionManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(COUNT_CUSTOM_USAGE_REPORTS)) {
+      stmt.setString(1, orgId);
+
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          numUSageWidgets = rs.getInt(1);
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Unable to get Active Orgs", ex);
+    }
+    return numCostWidgets + numUSageWidgets;
   }
 }

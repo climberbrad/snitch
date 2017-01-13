@@ -43,4 +43,30 @@ public class AlexandriaDao {
 
     return response.isPresent() ? response.get().aggregate.quantity : 0;
   }
+
+  public int getNumRisExpiringNextMonth(ImmutableList<Account> accounts) {
+
+    long nextMonth = System.currentTimeMillis() + 2592000000l;
+
+    ImmutableList<String> filters = ImmutableList.of(
+        "state==active",
+        "end > " + System.currentTimeMillis(),
+        "end < " + nextMonth
+    );
+
+    ImmutableList<String> accountIdentifiers = accounts.stream()
+        .map(account -> account.accountIdentifier.replace("-", ""))
+        .collect(Gullectors.toImmutableList());
+
+    AlexandriaPostRequest post = new AlexandriaPostRequest(accountIdentifiers, filters);
+    Optional<AlexandriaResponse> response = Optional.empty();
+    try {
+      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
+      response = RestUtil.httpPostRequest(baseUrl, entity, AlexandriaResponse.class);
+    } catch (JsonProcessingException e) {
+      log.error("Unable to call Alexandria", e);
+    }
+
+    return response.isPresent() ? response.get().aggregate.quantity : 0;
+  }
 }

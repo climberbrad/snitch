@@ -22,6 +22,8 @@ import com.cloudability.snitch.model.UserLogins;
 import com.cloudability.snitch.model.XAxis;
 import com.cloudability.streams.Gullectors;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,7 +114,13 @@ public class SnitchResource {
   public Response getReservations(@PathParam("orgId") String orgId) {
     ImmutableList<Account> accounts = getAccounts(orgId);
     int activeRiCount = alexandriaDao.getActiveRiCount(accounts);
-    double savingsFromPlan = hibikiDao.getPlan(accounts);
+    double savingsFromPlan = BigDecimal.valueOf(hibikiDao.getPlan(accounts))
+        .setScale(2, RoundingMode.HALF_UP)
+        .doubleValue();
+
+    int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(accounts);
+
+    String lastLogin = redshiftDao.getLatestLogin(orgId);
 
     // subscription start for primary account
     String subscriptionStartsAt = accounts.stream()
@@ -120,7 +128,15 @@ public class SnitchResource {
         .map(account -> account.subscriptionStartsAt)
         .findFirst().get();
 
-    return Response.ok().entity(new OrgDetail(orgId, subscriptionStartsAt, activeRiCount, accounts.size(), savingsFromPlan))
+    return Response.ok().entity(
+        new OrgDetail(
+            orgId,
+            subscriptionStartsAt,
+            activeRiCount,
+            accounts.size(),
+            savingsFromPlan,
+            lastLogin,
+            numRisExpiringNextMonth))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

@@ -27,6 +27,13 @@ public class RedshiftDao {
       + "and sent_at < '2016-12-31' "
       + "group by month, name";
 
+  public static final String COUNT_LOGINS = "SELECT count(*) "
+      + "FROM success.dashboard_index "
+      + "where env = 'production' "
+      + "and org_id =  ? "
+      + "and sent_at > ? "
+      + "and sent_at < ?";
+
   private static final String SELECT_LATEST_LOGIN = "SELECT name, date(sent_at) "
       + "FROM success.dashboard_index "
       + "where env = 'production' "
@@ -113,5 +120,24 @@ public class RedshiftDao {
       log.error("Unable to get Active Orgs", ex);
     }
     return planLastExecutedDate;
+  }
+
+  public String getLoginCount(String orgId, String startDate, String endDate) {
+    String numLoginsLastMonth = "";
+    try (Connection conn = connectionManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(COUNT_LOGINS)) {
+      stmt.setString(1, orgId);
+      stmt.setString(2, startDate);
+      stmt.setString(3, endDate);
+
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          numLoginsLastMonth = rs.getString(1).trim();
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Unable to get Active Orgs", ex);
+    }
+    return numLoginsLastMonth;
   }
 }

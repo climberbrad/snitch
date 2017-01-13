@@ -127,8 +127,10 @@ public class SnitchResource {
 
     String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(accounts));
 
-
     String lastLogin = redshiftDao.getLatestLogin(orgId);
+
+    String numLoginsLastMonth = redshiftDao.getLoginCount(orgId, "2016-12-01", "2016-12-31");
+    String numLoginsLastTwoMonth = redshiftDao.getLoginCount(orgId, "2016-11-01", "2016-12-31");
 
     // subscription start for primary account
     String subscriptionStartsAt = accounts.stream()
@@ -146,7 +148,9 @@ public class SnitchResource {
             lastLogin,
             numRisExpiringNextMonth,
             dateOfLastRiPurchase,
-            planLastExecuted))
+            planLastExecuted,
+            numLoginsLastMonth,
+            numLoginsLastTwoMonth))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

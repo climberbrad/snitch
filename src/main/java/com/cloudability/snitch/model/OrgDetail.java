@@ -15,6 +15,7 @@ public class OrgDetail {
   public String numTotalPageLoads;
   public String numPlannerPageLoads;
   public int numCustomWidgetsCreated;
+  public String lastDataSyncDate;
 
   public OrgDetail(
       String id,
@@ -30,7 +31,8 @@ public class OrgDetail {
       String numLoginsLastTwoMonth,
       String numTotalPageLoads,
       String numPlannerPageLoads,
-      int numCustomWidgetsCreated
+      int numCustomWidgetsCreated,
+      String lastDataSyncDate
   ) {
     this.id = id;
     this.subscriptionStartsAt = subscriptionStartsAt;
@@ -46,5 +48,6 @@ public class OrgDetail {
     this.numTotalPageLoads = numTotalPageLoads;
     this.numPlannerPageLoads = numPlannerPageLoads;
     this.numCustomWidgetsCreated = numCustomWidgetsCreated;
+    this.lastDataSyncDate = lastDataSyncDate;
   }
 }

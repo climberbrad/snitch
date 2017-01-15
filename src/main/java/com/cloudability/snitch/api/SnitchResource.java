@@ -185,6 +185,12 @@ public class SnitchResource {
         .map(account -> account.subscriptionStartsAt)
         .findFirst().get();
 
+    String payerAccount = accounts.stream()
+        .filter(account -> account.isPrimary)
+        .map(account -> account.accountIdentifier)
+        .findFirst().get();
+
+    String lastDataSyncDate = orgDao.getLastDataSyncDate(payerAccount);
 
     OrgDetail orgDetail = new OrgDetail(
         orgId,
@@ -200,7 +206,8 @@ public class SnitchResource {
         numLoginsLastTwoMonth,
         numTotalPageLoads,
         totalPlannerPageLoads,
-        numCustomWidgetsCreated);
+        numCustomWidgetsCreated,
+        lastDataSyncDate);
     orgDetailCache.put(orgId, orgDetail);
 
     return orgDetail;

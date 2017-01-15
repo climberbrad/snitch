@@ -28,6 +28,10 @@ public class OrgDao {
       + "JOIN service_accounts AS sa ON sa.account_identifier = ca.account_identifier "
       + "WHERE orgs.id =?";
 
+  private static final String SELECT_LAST_SYNC_DATE = "SELECT date(max(last_bill_fetched_at)) "
+      + "FROM credentials "
+      + "WHERE account_identifier = ?";
+
   public OrgDao(SnitchDbConnectionManager connectionManager) {
     this.connectionManager = connectionManager;
   }
@@ -70,5 +74,22 @@ public class OrgDao {
       log.error("Unable to get Active Orgs", ex);
     }
     return organizationBuilder.build();
+  }
+
+  public String getLastDataSyncDate(String accountIdentifier) {
+    String lastSyncDate = "";
+
+    try (Connection conn = connectionManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(SELECT_LAST_SYNC_DATE)) {
+      stmt.setString(1, accountIdentifier);
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          lastSyncDate = rs.getString(1);
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Unable to get Active Orgs", ex);
+    }
+    return lastSyncDate;
   }
 }

@@ -185,12 +185,12 @@ public class SnitchResource {
         .map(account -> account.subscriptionStartsAt)
         .findFirst().get();
 
-    String payerAccount = accounts.stream()
+    ImmutableList<String> payerAccounts = accounts.stream()
         .filter(account -> account.isPrimary)
         .map(account -> account.accountIdentifier)
-        .findFirst().get();
+        .collect(Gullectors.toImmutableList());
 
-    String lastDataSyncDate = orgDao.getLastDataSyncDate(payerAccount);
+    String lastDataSyncDate = orgDao.getLastDataSyncDate(payerAccounts);
 
     OrgDetail orgDetail = new OrgDetail(
         orgId,

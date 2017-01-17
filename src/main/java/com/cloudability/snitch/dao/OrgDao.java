@@ -26,11 +26,12 @@ public class OrgDao {
       + "JOIN credentials AS creds ON orgs.id = creds.organization_id "
       + "JOIN credential_accounts AS ca ON ca.credential_id = creds.id "
       + "JOIN service_accounts AS sa ON sa.account_identifier = ca.account_identifier "
-      + "WHERE orgs.id =?";
+      + "WHERE orgs.id =? "
+      + "group by ca.account_identifier";
 
   private static final String SELECT_LAST_SYNC_DATE = "SELECT date(max(last_bill_fetched_at)) "
       + "FROM credentials "
-      + "WHERE account_identifier = ?";
+      + "WHERE account_identifier in ";
 
   public OrgDao(SnitchDbConnectionManager connectionManager) {
     this.connectionManager = connectionManager;
@@ -49,7 +50,9 @@ public class OrgDao {
           int groupId = rs.getInt(2);
           String accountIdentifier = rs.getString(3);
           Boolean isPrimary = rs.getBoolean(4);
-          accountBuilder.add(new Account(subscriptionStartsAt, groupId, accountIdentifier, isPrimary));
+          if(accountIdentifier.contains("-") && accountIdentifier.length() == 14) {
+            accountBuilder.add(new Account(subscriptionStartsAt, groupId, accountIdentifier, isPrimary));
+          }
         }
       }
     } catch (Exception ex) {
@@ -76,12 +79,27 @@ public class OrgDao {
     return organizationBuilder.build();
   }
 
-  public String getLastDataSyncDate(String accountIdentifier) {
+  public String getLastDataSyncDate(ImmutableList<String> accountIdentifiers) {
     String lastSyncDate = "";
+    StringBuilder sqlBuilder = new StringBuilder(SELECT_LAST_SYNC_DATE);
+
+    sqlBuilder.append("(");
+    for(int i=0;i<accountIdentifiers.size();i++) {
+      if(i > 0) {
+        sqlBuilder.append(",");
+      }
+      sqlBuilder.append("?");
+    }
+    sqlBuilder.append(")");
+
+
 
     try (Connection conn = connectionManager.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(SELECT_LAST_SYNC_DATE)) {
-      stmt.setString(1, accountIdentifier);
+         PreparedStatement stmt = conn.prepareStatement(sqlBuilder.toString())) {
+      for(int i=0;i<accountIdentifiers.size();i++) {
+        stmt.setString(i+1, accountIdentifiers.get(i));
+      }
+
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
           lastSyncDate = rs.getString(1);

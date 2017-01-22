@@ -88,6 +88,6 @@ public class AlexandriaDao {
       log.error("Unable to call Alexandria", e);
     }
 
-    return response.isPresent() ? Long.valueOf(response.get().result.get(0).start).longValue() : 0;
+    return (response.isPresent() && response.get().result.size() > 0) ? Long.valueOf(response.get().result.get(0).start).longValue() : 0;
   }
 }

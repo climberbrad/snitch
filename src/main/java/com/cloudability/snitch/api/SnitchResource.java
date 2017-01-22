@@ -72,17 +72,6 @@ public class SnitchResource {
   }
 
   @GET
-  @Path("/org/{orgId}/hibiki")
-  public Response getPlan(@PathParam("orgId") String orgId) {
-    ImmutableList<Account> accounts = getAccounts(orgId);
-
-    return Response.ok()
-        .entity(hibikiDao.getPlan(accounts))
-        .header("Access-Control-Allow-Origin", "*")
-        .build();
-  }
-
-  @GET
   @Path("/orgs")
   public Response getOrgs() {
     return Response.ok()

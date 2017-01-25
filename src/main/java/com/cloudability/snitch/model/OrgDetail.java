@@ -16,6 +16,7 @@ public class OrgDetail {
   public String numPlannerPageLoads;
   public int numCustomWidgetsCreated;
   public String lastDataSyncDate;
+  public int numAwsServices;
 
   public OrgDetail(
       String id,
@@ -32,7 +33,8 @@ public class OrgDetail {
       String numTotalPageLoads,
       String numPlannerPageLoads,
       int numCustomWidgetsCreated,
-      String lastDataSyncDate
+      String lastDataSyncDate,
+      int numAwsServices
   ) {
     this.id = id;
     this.subscriptionStartsAt = subscriptionStartsAt;
@@ -49,5 +51,6 @@ public class OrgDetail {
     this.numPlannerPageLoads = numPlannerPageLoads;
     this.numCustomWidgetsCreated = numCustomWidgetsCreated;
     this.lastDataSyncDate = lastDataSyncDate;
+    this.numAwsServices = numAwsServices;
   }
 }

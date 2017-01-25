@@ -6,10 +6,14 @@ import com.cloudability.snitch.model.Ankeny.AnkenyCostPerServiceResponse;
 import com.cloudability.snitch.model.Ankeny.AnkenyPostData;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 public class AnkenyDao {
   public final String ankenyBaseUrl;
+  public final DateTimeFormatter ANKENY_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
 
   public AnkenyDao(String ankenyBaseUrl) {
     this.ankenyBaseUrl = ankenyBaseUrl;
@@ -19,8 +23,9 @@ public class AnkenyDao {
       int orgId,
       int groupId,
       String payerAccountId,
-      ImmutableList<String> acccountIdentifiers)
-  {
+      ImmutableList<String> acccountIdentifiers,
+      Instant startDate,
+      Instant endDate) {
     AnkenyPostData data = AnkenyPostData.newBuilder()
         .withAccount_identifiers(ImmutableList.of(payerAccountId))
         .withDimensions(ImmutableList.of("month"))
@@ -29,17 +34,19 @@ public class AnkenyDao {
         .withGroup_id(groupId)
         .withLinked_account_identifiers(acccountIdentifiers)
         .withBackend("olap")
-        .withStart_at("2016-01-01")
-        .withEnd_at("2016-12-31")
+        .withStart_at(ANKENY_DATE_FORMATTER.format(startDate))
+        .withEnd_at(ANKENY_DATE_FORMATTER.format(endDate))
         .build();
     return RestUtil.ankenyTotalSpendRequest(ankenyBaseUrl, data);
   }
 
-  public Optional<AnkenyCostPerServiceResponse> getMontlyCostPerService(
+  public Optional<AnkenyCostPerServiceResponse> getCostPerService(
       int orgId,
       int groupId,
       String payerAccountId,
-      ImmutableList<String> acccountIdentifiers) {
+      ImmutableList<String> acccountIdentifiers,
+      Instant startDate,
+      Instant endDate) {
 
     AnkenyPostData data = AnkenyPostData.newBuilder()
         .withAccount_identifiers(ImmutableList.of(payerAccountId))
@@ -49,8 +56,8 @@ public class AnkenyDao {
         .withGroup_id(groupId)
         .withLinked_account_identifiers(acccountIdentifiers)
         .withBackend("olap")
-        .withStart_at("2016-01-01")
-        .withEnd_at("2016-12-31")
+        .withStart_at(ANKENY_DATE_FORMATTER.format(startDate))
+        .withEnd_at(ANKENY_DATE_FORMATTER.format(endDate))
         .build();
     return RestUtil.multiServiceAnkenyPostRequest(ankenyBaseUrl, data);
   }

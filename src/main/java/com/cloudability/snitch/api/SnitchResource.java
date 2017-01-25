@@ -1,6 +1,9 @@
 package com.cloudability.snitch.api;
 
-import com.cloudability.snitch.GraphBuilder;
+import com.cloudability.snitch.OrgDataBroker;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -12,10 +15,10 @@ import javax.ws.rs.core.Response;
 @Path("/v1")
 @Produces({MediaType.APPLICATION_JSON})
 public class SnitchResource {
-  private final GraphBuilder graphBuilder;
+  private final OrgDataBroker orgDataBroker;
 
-  public SnitchResource(GraphBuilder graphBuilder) {
-    this.graphBuilder = graphBuilder;
+  public SnitchResource(OrgDataBroker orgDataBroker) {
+    this.orgDataBroker = orgDataBroker;
   }
 
   @GET
@@ -27,7 +30,7 @@ public class SnitchResource {
   @Path("/orgs")
   public Response getOrgs() {
     return Response.ok()
-        .entity(graphBuilder.getActiveOrgList())
+        .entity(orgDataBroker.getActiveOrgList())
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }
@@ -36,7 +39,7 @@ public class SnitchResource {
   @Path("/org/{orgId}/graph/{graphName}")
   public Response generateGraph(@PathParam("orgId") String orgId, @PathParam("graphName") String graphName) {
 
-    return Response.ok().entity(graphBuilder.buildGraph(orgId, graphName))
+    return Response.ok().entity(orgDataBroker.buildGraph(orgId, graphName, Instant.now().minus(365, ChronoUnit.DAYS), Instant.now()))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }
@@ -46,7 +49,7 @@ public class SnitchResource {
   public Response getReservations(@PathParam("orgId") String orgId) {
 
     return Response.ok().entity(
-        graphBuilder.getOrgDetail(orgId))
+        orgDataBroker.getOrgDetail(orgId))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

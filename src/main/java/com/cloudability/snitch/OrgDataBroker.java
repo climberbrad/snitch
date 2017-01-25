@@ -26,17 +26,21 @@ import com.cloudability.streams.Gullectors;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class GraphBuilder {
+public class OrgDataBroker {
   private final OrgDao orgDao;
   private final AnkenyDao ankenyDao;
   private final RedshiftDao redshiftDao;
   private final AlexandriaDao alexandriaDao;
   private final HibikiDao hibikiDao;
+
+  // caches
   private static final Map<String, ImmutableList<Account>> accountCache = new HashMap<>();
   private static final Map<String, OrgDetail> orgDetailCache = new HashMap<>();
 
@@ -45,7 +49,7 @@ public class GraphBuilder {
   private static final String[] ALL_MONTHS_CATEGORY =
       new String[]{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-  public GraphBuilder(
+  public OrgDataBroker(
       OrgDao orgDao,
       AnkenyDao ankenyDao,
       RedshiftDao redshiftDao,
@@ -59,7 +63,8 @@ public class GraphBuilder {
     this.hibikiDao = hibikiDao;
   }
 
-  public Graph buildGraph(String orgId, String graphName) {
+  public Graph buildGraph(String orgId, String graphName, Instant startDate, Instant endDate) {
+    ImmutableList<Account> accounts = getAccounts(orgId);
 
     // total logins
     if (graphName.equalsIgnoreCase("logins")) {
@@ -71,12 +76,13 @@ public class GraphBuilder {
     }
 
     // total spend
-    if (graphName.equalsIgnoreCase("spend")) {
+    if (graphName.equalsIgnoreCase("totalSpend")) {
       return new Graph(
           new Chart(GraphType.line),
           new Title(graphName),
           new XAxis(ALL_MONTHS_CATEGORY),
-          getAwsTotalSpendData(orgId));
+          getAwsTotalSpendData(orgId, accounts, startDate, endDate)
+      );
     }
 
     // total spend per service
@@ -85,7 +91,8 @@ public class GraphBuilder {
           new Chart(GraphType.area),
           new Title(graphName),
           new XAxis(ALL_MONTHS_CATEGORY),
-          getAwsSpendPerServiceData(orgId));
+          getAwsSpendPerServiceData(orgId, accounts, startDate, endDate)
+      );
     }
 
     return null;
@@ -113,25 +120,26 @@ public class GraphBuilder {
 
     ImmutableList<Account> accounts = getAccounts(orgId);
     int activeRiCount = alexandriaDao.getActiveRiCount(accounts);
+
+    int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(accounts);
+    String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(accounts));
+
     double savingsFromPlan = BigDecimal.valueOf(hibikiDao.getPlan(accounts))
         .setScale(2, RoundingMode.HALF_UP)
         .doubleValue();
 
-    int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(accounts);
 
     String planLastExecuted = redshiftDao.getLastRiPlanDate(orgId);
-
-    String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(accounts));
-
     String lastLogin = redshiftDao.getLatestLogin(orgId);
-
     String numTotalPageLoads = redshiftDao.getTotalPageLoads(orgId);
     String totalPlannerPageLoads = redshiftDao.getTotalPlanerPageLoads(orgId);
-
     String numLoginsLastMonth = redshiftDao.getLoginCount(orgId, "2016-12-01", "2016-12-31");
     String numLoginsLastTwoMonth = redshiftDao.getLoginCount(orgId, "2016-11-01", "2016-12-31");
-
     int numCustomWidgetsCreated = redshiftDao.getNumCustomWidgetsCreated(orgId);
+
+
+    ImmutableList<SeriesData> serviceSpendLastMonth = getAwsSpendPerServiceData(orgId, accounts, Instant.now().minus(90, ChronoUnit.DAYS), Instant.now());
+    int awsServiceCount = serviceSpendLastMonth.size();
 
     // subscription start for primary account
     String subscriptionStartsAt = accounts.stream()
@@ -161,15 +169,23 @@ public class GraphBuilder {
         numTotalPageLoads,
         totalPlannerPageLoads,
         numCustomWidgetsCreated,
-        lastDataSyncDate);
+        lastDataSyncDate,
+        awsServiceCount);
     orgDetailCache.put(orgId, orgDetail);
 
     return orgDetail;
   }
 
-  private ImmutableList<SeriesData> getAwsTotalSpendData(String orgId) {
-    ImmutableList<Account> accounts = getAccounts(orgId);
-
+  /**
+   * Total AWS spend
+   *
+   * @param orgId
+   * @param accounts
+   * @param startDate
+   * @param endDate
+   * @return
+   */
+  private ImmutableList<SeriesData> getAwsTotalSpendData(String orgId, ImmutableList<Account> accounts, Instant startDate, Instant endDate) {
     String primaryAccount = accounts.stream()
         .filter(account -> account.isPrimary)
         .map(account -> account.accountIdentifier)
@@ -183,7 +199,7 @@ public class GraphBuilder {
     int groupId = accounts.stream().map(account -> account.groupId).findFirst().get();
 
     Optional<AnkenyResponse> response =
-        ankenyDao.getTotalMontlyCostData(Integer.valueOf(orgId), groupId, primaryAccount, linkedAccounts);
+        ankenyDao.getTotalMontlyCostData(Integer.valueOf(orgId), groupId, primaryAccount, linkedAccounts, startDate, endDate);
 
     List<RecordList> records = response.get().records;
     double[] dataPoints = new double[records.size()];
@@ -196,9 +212,16 @@ public class GraphBuilder {
         new SeriesData(primaryAccount, dataPoints));
   }
 
-  private ImmutableList<SeriesData> getAwsSpendPerServiceData(String orgId) {
-    ImmutableList<Account> accounts = getAccounts(orgId);
-
+  /**
+   * Spend per AWS Service
+   *
+   * @param orgId
+   * @param accounts
+   * @param startDate
+   * @param endDate
+   * @return
+   */
+  private ImmutableList<SeriesData> getAwsSpendPerServiceData(String orgId, ImmutableList<Account> accounts, Instant startDate, Instant endDate) {
     String primaryAccount = accounts.stream()
         .filter(account -> account.isPrimary)
         .map(account -> account.accountIdentifier)
@@ -212,10 +235,12 @@ public class GraphBuilder {
     int groupId = accounts.stream().map(account -> account.groupId).findFirst().get();
 
     Optional<AnkenyCostPerServiceResponse> response =
-        ankenyDao.getMontlyCostPerService(Integer.valueOf(orgId), groupId, primaryAccount, linkedAccounts);
+        ankenyDao.getCostPerService(Integer.valueOf(orgId), groupId, primaryAccount, linkedAccounts,startDate, endDate);
 
 
     List<MultiRecordList> records = response.get().records;
+
+    int numAwsServices = records.size();
 
     Map<String, double[]> serviceMonthlyData = new HashMap<>();
 
@@ -238,6 +263,7 @@ public class GraphBuilder {
 
   private ImmutableList<Account> getAccounts(String orgId) {
     ImmutableList<Account> accounts = accountCache.get(orgId);
+
     if (accounts == null) {
       accounts = orgDao.getAccounts(orgId);
       accountCache.put(orgId, accounts);

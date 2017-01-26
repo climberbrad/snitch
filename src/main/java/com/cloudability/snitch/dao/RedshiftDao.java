@@ -1,6 +1,9 @@
 package com.cloudability.snitch.dao;
 
+import static com.cloudability.snitch.dao.RedshiftDao.LOGIN_STAT_WINDOW.DAILY_INCREMENT;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.cloudability.snitch.model.UserLogins;
 
@@ -10,6 +13,9 @@ import org.apache.logging.log4j.Logger;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,21 +24,30 @@ import java.util.Map;
 public class RedshiftDao {
   private static final Logger log = LogManager.getLogger();
   private final SnitchDbConnectionManager connectionManager;
+  public final DateTimeFormatter DB_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
 
-  private static final String SELECT_LOGINS = "SELECT name, count(name), date_part('month', sent_at) as month "
+  private static final String SELECT_MONTHLY_LOGINS = "SELECT name, count(name), date_part('month', sent_at) as month "
       + "FROM success.dashboard_index "
       + "where env = 'production' "
       + "and org_id =  ? "
-      + "and sent_at > '2016-01-01' "
-      + "and sent_at < '2016-12-31' "
+      + "and sent_at >= ? "
+      + "and sent_at <= ? "
       + "group by month, name";
+
+  private static final String SELECT_DAILY_LOGINS = "SELECT name, count(name), date_part('day', sent_at) as day "
+      + "FROM success.dashboard_index "
+      + "where env = 'production' "
+      + "and org_id = ?"
+      + "and sent_at >= ?"
+      + "and sent_at <= ?"
+      + "group by day, name";
 
   public static final String COUNT_LOGINS = "SELECT count(*) "
       + "FROM success.dashboard_index "
       + "where env = 'production' "
       + "and org_id =  ? "
-      + "and sent_at > ? "
-      + "and sent_at < ?";
+      + "and sent_at >= ? "
+      + "and sent_at <= ?";
 
   private static final String SELECT_LATEST_LOGIN = "SELECT name, date(sent_at) "
       + "FROM success.dashboard_index "
@@ -50,13 +65,25 @@ public class RedshiftDao {
       + "and l.org_id = ? "
       + "limit 1";
 
-  public static final String COUNT_PAGE_LOADS = "SELECT count(*) "
+  private static final String COUNT_PAGE_LOADS = "SELECT count(*) "
       + "FROM success.pages as p "
       + "JOIN success.users_login as l ON p.user_id = l.user_id  "
-      + "where p.received_at > '2016-12-01'  "
-      + "and l.received_at > '2016-12-01'  "
-      + "and l.org_id = ? "
+      + "where l.org_id = ? "
+      + "and l.received_at >= ? "
+      + "and l.received_at <= ? "
+      + "and p.received_at >= ? "
+      + "and p.received_at <= ? "
       + "limit 1";
+
+  private static final String PAGE_LOAD_STATS = "SELECT context_page_title, count(*) "
+      + "FROM success.pages as p  "
+      + "JOIN success.users_login as l ON p.user_id = l.user_id   "
+      + "where l.org_id = ? "
+      + "and p.received_at >= ?"
+      + "and p.received_at <= ? "
+      + "and l.received_at >= ? "
+      + "and l.received_at <= ? "
+      + "group by context_page_title";
 
   public static final String COUNT_PLANNER_PAGE_LOADS = "SELECT count(*) "
       + "FROM success.pages as p "
@@ -81,13 +108,17 @@ public class RedshiftDao {
     this.connectionManager = connectionManager;
   }
 
-  public ImmutableList<UserLogins> getLoginData(String orgId) {
+  public ImmutableList<UserLogins> getLoginData(String orgId, Instant startDate, Instant endDate, LOGIN_STAT_WINDOW window) {
     ImmutableList.Builder<UserLogins> loginStatBuilder = ImmutableList.builder();
     Map<String, UserLogins> loginsMap = new HashMap<>();
 
+    String sql = window == DAILY_INCREMENT ? SELECT_DAILY_LOGINS : SELECT_MONTHLY_LOGINS;
+
     try (Connection conn = connectionManager.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(SELECT_LOGINS)) {
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
       stmt.setString(1, orgId);
+      stmt.setString(2, DB_DATE_FORMATTER.format(startDate));
+      stmt.setString(3, DB_DATE_FORMATTER.format(endDate));
 
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
@@ -149,13 +180,13 @@ public class RedshiftDao {
     return planLastExecutedDate;
   }
 
-  public String getLoginCount(String orgId, String startDate, String endDate) {
+  public String getLoginCount(String orgId, Instant after, Instant before) {
     String numLoginsLastMonth = "";
     try (Connection conn = connectionManager.getConnection();
          PreparedStatement stmt = conn.prepareStatement(COUNT_LOGINS)) {
       stmt.setString(1, orgId);
-      stmt.setString(2, startDate);
-      stmt.setString(3, endDate);
+      stmt.setString(2, DB_DATE_FORMATTER.format(after));
+      stmt.setString(3, DB_DATE_FORMATTER.format(before));
 
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
@@ -168,11 +199,15 @@ public class RedshiftDao {
     return numLoginsLastMonth;
   }
 
-  public String getTotalPageLoads(String orgId) {
+  public String totalPageLoadCount(String orgId, Instant after, Instant before) {
     String numLoginsLastMonth = "";
     try (Connection conn = connectionManager.getConnection();
          PreparedStatement stmt = conn.prepareStatement(COUNT_PAGE_LOADS)) {
       stmt.setString(1, orgId);
+      stmt.setString(2, DB_DATE_FORMATTER.format(after));
+      stmt.setString(3, DB_DATE_FORMATTER.format(before));
+      stmt.setString(4, DB_DATE_FORMATTER.format(after));
+      stmt.setString(5, DB_DATE_FORMATTER.format(before));
 
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
@@ -200,6 +235,28 @@ public class RedshiftDao {
       log.error("Unable to get Active Orgs", ex);
     }
     return numPlannerPageLoads;
+  }
+
+  public ImmutableMap<String, Integer> getPageLoads(String orgId, Instant after, Instant before) {
+    ImmutableMap.Builder<String, Integer> pageLoadMap = ImmutableMap.builder();
+
+    try (Connection conn = connectionManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(PAGE_LOAD_STATS)) {
+      stmt.setString(1, orgId);
+      stmt.setString(2, DB_DATE_FORMATTER.format(after));
+      stmt.setString(3, DB_DATE_FORMATTER.format(before));
+      stmt.setString(4, DB_DATE_FORMATTER.format(after));
+      stmt.setString(5, DB_DATE_FORMATTER.format(before));
+
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          pageLoadMap.put(rs.getString(1), rs.getInt(2));
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Unable to get page load count", ex);
+    }
+    return pageLoadMap.build();
   }
 
   public int getNumCustomWidgetsCreated(String orgId) {
@@ -232,5 +289,10 @@ public class RedshiftDao {
       log.error("Unable to get Active Orgs", ex);
     }
     return numCostWidgets + numUSageWidgets;
+  }
+
+  public static enum LOGIN_STAT_WINDOW {
+    MONTHLY_INCREMENT,
+    DAILY_INCREMENT
   }
 }

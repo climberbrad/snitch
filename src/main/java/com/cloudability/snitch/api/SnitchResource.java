@@ -36,10 +36,17 @@ public class SnitchResource {
   }
 
   @GET
-  @Path("/org/{orgId}/graph/{graphName}")
-  public Response generateGraph(@PathParam("orgId") String orgId, @PathParam("graphName") String graphName) {
+  @Path("/org/{orgId}/linegraph/{graphName}")
+  public Response generateLineGraph(@PathParam("orgId") String orgId, @PathParam("graphName") String graphName) {
+    return Response.ok().entity(orgDataBroker.buildLineGraph(orgId, graphName, Instant.now().minus(365, ChronoUnit.DAYS), Instant.now()))
+        .header("Access-Control-Allow-Origin", "*")
+        .build();
+  }
 
-    return Response.ok().entity(orgDataBroker.buildGraph(orgId, graphName, Instant.now().minus(365, ChronoUnit.DAYS), Instant.now()))
+  @GET
+  @Path("/org/{orgId}/piechart/{graphName}")
+  public Response generatePieChart(@PathParam("orgId") String orgId, @PathParam("graphName") String graphName) {
+    return Response.ok().entity(orgDataBroker.buildPieChart(orgId, graphName, Instant.now().minus(365, ChronoUnit.DAYS), Instant.now()))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }
@@ -47,7 +54,6 @@ public class SnitchResource {
   @GET
   @Path("/org/{orgId}/details")
   public Response getReservations(@PathParam("orgId") String orgId) {
-
     return Response.ok().entity(
         orgDataBroker.getOrgDetail(orgId))
         .header("Access-Control-Allow-Origin", "*")

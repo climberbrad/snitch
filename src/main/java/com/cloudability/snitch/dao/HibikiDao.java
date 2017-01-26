@@ -5,6 +5,7 @@ import static com.cloudability.snitch.SnitchServer.MAPPER;
 import com.google.common.collect.ImmutableList;
 
 import com.cloudability.snitch.model.Account;
+import com.cloudability.snitch.model.hibiki.HibikiComparisonResponse;
 import com.cloudability.snitch.model.hibiki.HibikiPostRequest;
 import com.cloudability.snitch.model.hibiki.HibikiResponse;
 import com.cloudability.streams.Gullectors;
@@ -25,8 +26,26 @@ public class HibikiDao {
     this.baseUrl = baseUrl;
   }
 
-  public double getPlan(ImmutableList<Account> accounts) {
+  public double getCompare(ImmutableList<Account> accounts) {
 
+    ImmutableList<String> accountIdentifiers = accounts.stream()
+        .map(account -> account.accountIdentifier)
+        .collect(Gullectors.toImmutableList());
+
+    HibikiPostRequest post = new HibikiPostRequest(accountIdentifiers);
+    Optional<HibikiComparisonResponse> response = Optional.empty();
+    try {
+      String postJson = MAPPER.writeValueAsString(post);
+      StringEntity entity = new StringEntity(postJson, ContentType.APPLICATION_JSON);
+      response = RestUtil.httpPostRequest(baseUrl + "/compare", entity, HibikiComparisonResponse.class);
+    } catch (JsonProcessingException e) {
+      log.error("Unable to call Alexandria", e);
+    }
+
+    return response.get().result.products.ec2.costComparison.get(7).costs.totalEstimatedSavings;
+  }
+
+  public Optional<HibikiResponse> getPlan(ImmutableList<Account> accounts) {
     ImmutableList<String> accountIdentifiers = accounts.stream()
         .map(account -> account.accountIdentifier)
         .collect(Gullectors.toImmutableList());
@@ -37,11 +56,10 @@ public class HibikiDao {
       String postJson = MAPPER.writeValueAsString(post);
       StringEntity entity = new StringEntity(postJson, ContentType.APPLICATION_JSON);
       response = RestUtil.httpPostRequest(baseUrl, entity, HibikiResponse.class);
+      return response;
     } catch (JsonProcessingException e) {
       log.error("Unable to call Alexandria", e);
     }
-
-
-    return response.get().result.products.ec2.costComparison.get(7).costs.totalEstimatedSavings;
+    return Optional.empty();
   }
 }

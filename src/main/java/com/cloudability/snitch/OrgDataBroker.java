@@ -29,6 +29,7 @@ import com.cloudability.snitch.model.SeriesData;
 import com.cloudability.snitch.model.Title;
 import com.cloudability.snitch.model.UserLogins;
 import com.cloudability.snitch.model.XAxis;
+import com.cloudability.snitch.model.hibiki.HibikiResponse;
 import com.cloudability.streams.Gullectors;
 
 import org.joda.time.DateTime;
@@ -201,7 +202,7 @@ public class OrgDataBroker {
     ImmutableMap<String, Integer> pageLoginMap = redshiftDao.getPageLoads(orgid, startDate, endDate);
     DataPoint[] dataPoints = new DataPoint[pageLoginMap.size()];
 
-    int index=0;
+    int index = 0;
     for (String page : pageLoginMap.keySet()) {
 
       String trimmedPageName = page.contains("|") ? page.substring(0, page.indexOf('|')) : page;
@@ -226,7 +227,7 @@ public class OrgDataBroker {
     int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(accounts);
     String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(accounts));
 
-    double savingsFromPlan = BigDecimal.valueOf(hibikiDao.getPlan(accounts))
+    double savingsFromPlan = BigDecimal.valueOf(hibikiDao.getCompare(accounts))
         .setScale(2, RoundingMode.HALF_UP)
         .doubleValue();
 
@@ -257,6 +258,13 @@ public class OrgDataBroker {
         .collect(Gullectors.toImmutableList());
 
     String lastDataSyncDate = orgDao.getLastDataSyncDate(payerAccounts);
+    Optional<HibikiResponse> response = hibikiDao.getPlan(accounts);
+    long sells = 0;
+    if (response.isPresent()) {
+      sells = response.get().result.products.ec2.accountActions.stream()
+          .map(accountActions -> accountActions.actions.stream()
+              .filter(act -> act.action.equalsIgnoreCase("sell"))).count();
+    }
 
     OrgDetail orgDetail = new OrgDetail(
         orgId,
@@ -274,8 +282,10 @@ public class OrgDataBroker {
         totalPlannerPageLoads,
         numCustomWidgetsCreated,
         lastDataSyncDate,
-        awsServiceCount);
+        awsServiceCount,
+        sells);
     orgDetailCache.put(orgId, orgDetail);
+
 
     return orgDetail;
   }

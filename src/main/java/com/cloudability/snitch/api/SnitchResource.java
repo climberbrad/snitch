@@ -1,5 +1,6 @@
 package com.cloudability.snitch.api;
 
+import com.cloudability.snitch.AccountCache;
 import com.cloudability.snitch.OrgDataBroker;
 
 import java.time.Instant;
@@ -56,6 +57,18 @@ public class SnitchResource {
   public Response getReservations(@PathParam("orgId") String orgId) {
     return Response.ok().entity(
         orgDataBroker.getOrgDetail(orgId))
+        .header("Access-Control-Allow-Origin", "*")
+        .build();
+  }
+
+  @GET
+  @Path("/org/{orgId}/accounts")
+  public Response getAccounts(@PathParam("orgId") String orgId) {
+
+    System.out.println("GET MY ACCOUNTS!");
+
+    return Response.ok().entity(
+        AccountCache.getPayerAccounts(orgId))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

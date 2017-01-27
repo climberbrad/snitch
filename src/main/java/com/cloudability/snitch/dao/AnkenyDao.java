@@ -22,12 +22,12 @@ public class AnkenyDao {
   public Optional<AnkenyResponse> getTotalMontlyCostData(
       int orgId,
       int groupId,
-      String payerAccountId,
+      ImmutableList<String> payerAccountIds,
       ImmutableList<String> acccountIdentifiers,
       Instant startDate,
       Instant endDate) {
     AnkenyPostData data = AnkenyPostData.newBuilder()
-        .withAccount_identifiers(ImmutableList.of(payerAccountId))
+        .withAccount_identifiers(payerAccountIds)
         .withDimensions(ImmutableList.of("month"))
         .withMetrics(ImmutableList.of("invoiced_cost"))
         .withOrganization_id(orgId)
@@ -43,13 +43,13 @@ public class AnkenyDao {
   public Optional<AnkenyCostPerServiceResponse> getCostPerService(
       int orgId,
       int groupId,
-      String payerAccountId,
+      ImmutableList<String> payerAccountIds,
       ImmutableList<String> acccountIdentifiers,
       Instant startDate,
       Instant endDate) {
 
     AnkenyPostData data = AnkenyPostData.newBuilder()
-        .withAccount_identifiers(ImmutableList.of(payerAccountId))
+        .withAccount_identifiers(payerAccountIds)
         .withDimensions(ImmutableList.of("service_name", "month"))
         .withMetrics(ImmutableList.of("invoiced_cost"))
         .withOrganization_id(orgId)

@@ -2,8 +2,10 @@ package com.cloudability.snitch.dao;
 
 import static com.cloudability.snitch.SnitchServer.MAPPER;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 
+import com.cloudability.snitch.model.AccountGETResult;
 import com.cloudability.snitch.model.Ankeny.AnkenyCostPerServiceResponse;
 import com.cloudability.snitch.model.Ankeny.AnkenyPostData;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
@@ -23,6 +25,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.Optional;
 
 public class RestUtil {
@@ -49,14 +52,17 @@ public class RestUtil {
   }
 
 
-  public static <T> Optional<T> httpGetRequest(final String url, final Class<T> expectedResultType) {
+  public static ImmutableList<AccountGETResult> httpGetAccountsRequest(final String url) {
     CloseableHttpResponse response = null;
     String body;
+    AccountGETResult[] accountGETResults = null;
     try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
       HttpGet httpGet = new HttpGet(url);
       httpGet.addHeader(HttpHeaders.ACCEPT, "application/json");
       response = httpClient.execute(httpGet);
       body = CharStreams.toString(new InputStreamReader(response.getEntity().getContent()));
+      accountGETResults = MAPPER.readValue(body, AccountGETResult[].class);
+      System.out.println("ere");
     } catch (IOException ex) {
       throw new RuntimeException("Snitch Server not available", ex);
     } finally {
@@ -68,20 +74,9 @@ public class RestUtil {
         }
       }
     }
-    JsonNode json = null;
-    try {
-      json = MAPPER.readTree(body);
-    } catch (IOException e) {
-      log.error("Failed to parse as JSON.", response, e);
-    }
-
-    try {
-      T result = MAPPER.treeToValue(json, expectedResultType);
-      return Optional.ofNullable(result);
-    } catch (Exception ex) {
-      log.error(body, response, ex);
-    }
-    throw new IllegalStateException("Unable to get parse response");
+    ImmutableList.Builder<AccountGETResult> builder = ImmutableList.builder();
+    builder.addAll(Arrays.asList(accountGETResults));
+    return builder.build();
   }
 
   public static <T> Optional<T> httpPostRequest(

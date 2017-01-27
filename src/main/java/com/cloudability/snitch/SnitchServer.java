@@ -8,7 +8,8 @@ import com.cloudability.snitch.config.RedshiftConfig;
 import com.cloudability.snitch.dao.AlexandriaDao;
 import com.cloudability.snitch.dao.AnkenyDao;
 import com.cloudability.snitch.dao.HibikiDao;
-import com.cloudability.snitch.dao.OrgDao;
+import com.cloudability.snitch.dao.GuiDao;
+import com.cloudability.snitch.dao.PipelineDao;
 import com.cloudability.snitch.dao.RedshiftDao;
 import com.cloudability.snitch.dao.SnitchDbConnectionManager;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -33,18 +34,22 @@ public class SnitchServer extends CloudabilityApp {
     String ankenyBaseUrl = configuration.getString("ankeny.baseUrl");
     String alexandriaBaseUrl = configuration.getString("alexandria.baseUrl");
     String hibikiBaseUrl = configuration.getString("hibiki.baseUrl");
+    String pipelineAccountUrl = configuration.getString("account.baseUrl");
 
+    PipelineDao pipelineDao = new PipelineDao(pipelineAccountUrl);
+    GuiDao guiDao = new GuiDao(connectionManager);
     cldyServiceBuilder
         .withAppName("Snitch")
         .withJsonMapper(MAPPER)
         .withServices(connectionManager)
         .withResource(new SnitchResource(
             new OrgDataBroker(
-                new OrgDao(connectionManager),
+                guiDao,
                 new AnkenyDao(ankenyBaseUrl),
                 new RedshiftDao(redshiftConnectionManager),
                 new AlexandriaDao(alexandriaBaseUrl),
-                new HibikiDao(hibikiBaseUrl))
+                new HibikiDao(hibikiBaseUrl),
+                new AccountCache(pipelineDao))
         ));
   }
 

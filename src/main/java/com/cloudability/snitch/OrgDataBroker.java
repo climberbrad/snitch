@@ -12,7 +12,6 @@ import com.cloudability.snitch.dao.AnkenyDao;
 import com.cloudability.snitch.dao.GuiDao;
 import com.cloudability.snitch.dao.HibikiDao;
 import com.cloudability.snitch.dao.RedshiftDao;
-import com.cloudability.snitch.model.Account;
 import com.cloudability.snitch.model.Ankeny.AnkenyCostPerServiceResponse;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
 import com.cloudability.snitch.model.Ankeny.MultiRecordList;
@@ -30,7 +29,6 @@ import com.cloudability.snitch.model.Title;
 import com.cloudability.snitch.model.UserLogins;
 import com.cloudability.snitch.model.XAxis;
 import com.cloudability.snitch.model.hibiki.HibikiResponse;
-import com.cloudability.streams.Gullectors;
 
 import org.joda.time.DateTime;
 import org.joda.time.Months;
@@ -229,19 +227,18 @@ public class OrgDataBroker {
       return orgDetailCache.get(orgId);
     }
 
-    ImmutableList<Account> accounts = accountCache.getAllAccounts(orgId);
-    int activeRiCount = alexandriaDao.getActiveRiCount(accounts);
+    int activeRiCount = alexandriaDao.getActiveRiCount(orgId);
+    int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(orgId);
+    String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(orgId));
 
-    int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(accounts);
-    String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(accounts));
-
-    double savingsFromPlan = BigDecimal.valueOf(hibikiDao.getCompare(accounts))
+    double savingsFromPlan = BigDecimal.valueOf(hibikiDao.getCompare(orgId))
         .setScale(2, RoundingMode.HALF_UP)
         .doubleValue();
 
     Instant now = Instant.now();
     Instant monthAgo = Instant.now().minus(30, ChronoUnit.DAYS);
     Instant twoMonthsAgo = Instant.now().minus(60, ChronoUnit.DAYS);
+    Instant yearAgo = Instant.now().minus(365, ChronoUnit.DAYS);
 
     String planLastExecuted = redshiftDao.getLastRiPlanDate(orgId);
     String lastLogin = redshiftDao.getLatestLogin(orgId);
@@ -251,19 +248,15 @@ public class OrgDataBroker {
     String numLoginsLastTwoMonth = redshiftDao.getLoginCount(orgId, twoMonthsAgo, now);
     int numCustomWidgetsCreated = redshiftDao.getNumCustomWidgetsCreated(orgId);
 
-    ImmutableList<SeriesData> serviceSpendLastMonth = getAwsSpendPerServiceData(orgId, monthAgo, now);
+    ImmutableList<SeriesData> serviceSpendLastMonth = getAwsSpendPerServiceData(orgId, yearAgo, now);
     int awsServiceCount = serviceSpendLastMonth.size();
 
     // subscription start for primary account
     String subscriptionStartsAt = guiDao.getSubscriptionStartDate(orgId);
 
-    ImmutableList<String> payerAccounts = accounts.stream()
-        .filter(account -> account.isPayer)
-        .map(account -> account.accountIdentifier)
-        .collect(Gullectors.toImmutableList());
 
-    String lastDataSyncDate = guiDao.getLastDataSyncDate(payerAccounts);
-    Optional<HibikiResponse> response = hibikiDao.getPlan(accounts);
+    String lastDataSyncDate = guiDao.getLastDataSyncDate(orgId);
+    Optional<HibikiResponse> response = hibikiDao.getPlan(orgId);
     long sells = 0;
     if (response.isPresent()) {
       sells = response.get().result.products.ec2.accountActions.stream()
@@ -275,7 +268,7 @@ public class OrgDataBroker {
         orgId,
         subscriptionStartsAt,
         activeRiCount,
-        accounts.size(),
+        AccountCache.getAllAccountIdentifiersWithDashes(orgId).size(),
         savingsFromPlan,
         lastLogin,
         numRisExpiringNextMonth,
@@ -304,10 +297,8 @@ public class OrgDataBroker {
 
     Optional<AnkenyResponse> response =
         ankenyDao.getTotalMontlyCostData(
-            Integer.valueOf(orgId),
+            orgId,
             groupId,
-            accountCache.getPayerAccounts(orgId),
-            accountCache.getLinkedAccounts(orgId),
             startDate,
             endDate);
 
@@ -319,7 +310,7 @@ public class OrgDataBroker {
     }
 
     return ImmutableList.of(
-        new SeriesData(accountCache.getPayerAccounts(orgId).get(0), dataPoints));
+        new SeriesData(accountCache.getPayerAccountIdentifiers(orgId).get(0), dataPoints));
   }
 
   /**
@@ -334,10 +325,8 @@ public class OrgDataBroker {
 
     Optional<AnkenyCostPerServiceResponse> response =
         ankenyDao.getCostPerService(
-            Integer.valueOf(orgId),
+            orgId,
             groupId,
-            accountCache.getPayerAccounts(orgId),
-            accountCache.getLinkedAccounts(orgId),
             startDate,
             endDate);
 

@@ -2,9 +2,8 @@ package com.cloudability.snitch.dao;
 
 import com.google.common.collect.ImmutableList;
 
-import com.cloudability.snitch.model.Account;
-import com.cloudability.snitch.model.AccountGETResult;
-import com.cloudability.snitch.model.PipelineAccount;
+import com.cloudability.snitch.model.LinkedAccount;
+import com.cloudability.snitch.model.PayerAccount;
 
 public class PipelineDao {
   private final String baseUrl;
@@ -13,17 +12,15 @@ public class PipelineDao {
     this.baseUrl = baseUrl;
   }
 
-  public ImmutableList<Account> getAccounts(String orgId) {
-    ImmutableList.Builder<Account> accountBuilder = ImmutableList.builder();
-    ImmutableList<AccountGETResult> pipelineAccounts = RestUtil.httpGetAccountsRequest(baseUrl + "/" + orgId);
-    for(AccountGETResult payerAccount : pipelineAccounts) {
-
-      accountBuilder.add(new Account(hyphenate(payerAccount.payer_account_id), true));
-      for(PipelineAccount linkedAccount : payerAccount.accounts) {
-        accountBuilder.add(new Account(hyphenate(linkedAccount.account_id), false));
+  public ImmutableList<PayerAccount> getAccounts(String orgId) {
+    ImmutableList<PayerAccount> payerAccounts = RestUtil.httpGetAccountsRequest(baseUrl + "/" + orgId);
+    for (PayerAccount payerAccount : payerAccounts) {
+      payerAccount.payer_account_id = hyphenate(payerAccount.payer_account_id);
+      for (LinkedAccount linkedAccount : payerAccount.accounts) {
+        linkedAccount.account_id = hyphenate(linkedAccount.account_id);
       }
     }
-    return accountBuilder.build();
+    return payerAccounts;
   }
 
   private String hyphenate(String accountId) {

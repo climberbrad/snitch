@@ -5,7 +5,7 @@ import static com.cloudability.snitch.SnitchServer.MAPPER;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 
-import com.cloudability.snitch.model.AccountGETResult;
+import com.cloudability.snitch.model.PayerAccount;
 import com.cloudability.snitch.model.Ankeny.AnkenyCostPerServiceResponse;
 import com.cloudability.snitch.model.Ankeny.AnkenyPostData;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
@@ -52,19 +52,18 @@ public class RestUtil {
   }
 
 
-  public static ImmutableList<AccountGETResult> httpGetAccountsRequest(final String url) {
+  public static ImmutableList<PayerAccount> httpGetAccountsRequest(final String url) {
     CloseableHttpResponse response = null;
     String body;
-    AccountGETResult[] accountGETResults = null;
+    PayerAccount[] payerAccounts = null;
     try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
       HttpGet httpGet = new HttpGet(url);
       httpGet.addHeader(HttpHeaders.ACCEPT, "application/json");
       response = httpClient.execute(httpGet);
       body = CharStreams.toString(new InputStreamReader(response.getEntity().getContent()));
-      accountGETResults = MAPPER.readValue(body, AccountGETResult[].class);
-      System.out.println("ere");
+      payerAccounts = MAPPER.readValue(body, PayerAccount[].class);
     } catch (IOException ex) {
-      throw new RuntimeException("Snitch Server not available", ex);
+      throw new RuntimeException("Unable to get account data from pipeline", ex);
     } finally {
       if (response != null) {
         try {
@@ -74,8 +73,8 @@ public class RestUtil {
         }
       }
     }
-    ImmutableList.Builder<AccountGETResult> builder = ImmutableList.builder();
-    builder.addAll(Arrays.asList(accountGETResults));
+    ImmutableList.Builder<PayerAccount> builder = ImmutableList.builder();
+    builder.addAll(Arrays.asList(payerAccounts));
     return builder.build();
   }
 

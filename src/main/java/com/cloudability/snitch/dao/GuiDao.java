@@ -2,6 +2,7 @@ package com.cloudability.snitch.dao;
 
 import com.google.common.collect.ImmutableList;
 
+import com.cloudability.snitch.AccountCache;
 import com.cloudability.snitch.model.OrgSearchResult;
 
 import org.apache.logging.log4j.LogManager;
@@ -16,7 +17,7 @@ public class GuiDao {
   private final SnitchDbConnectionManager connectionManager;
 
   private static final String SELECT_SUBSCRIPTION_START_DATE = "SELECT "
-      + "created_at "
+      + "date(created_at) "
       + "FROM organizations "
       + "WHERE id = ?";
 
@@ -54,9 +55,11 @@ public class GuiDao {
     return organizationBuilder.build();
   }
 
-  public String getLastDataSyncDate(ImmutableList<String> accountIdentifiers) {
+  public String getLastDataSyncDate(String orgId) {
     String lastSyncDate = "";
     StringBuilder sqlBuilder = new StringBuilder(SELECT_LAST_SYNC_DATE);
+
+    ImmutableList<String> accountIdentifiers = AccountCache.getAllAccountIdentifiersWithDashes(orgId);
 
     sqlBuilder.append("(");
     for(int i=0;i<accountIdentifiers.size();i++) {

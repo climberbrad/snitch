@@ -2,13 +2,10 @@ package com.cloudability.snitch.dao;
 
 import static com.cloudability.snitch.SnitchServer.MAPPER;
 
-import com.google.common.collect.ImmutableList;
-
-import com.cloudability.snitch.model.Account;
+import com.cloudability.snitch.AccountCache;
 import com.cloudability.snitch.model.hibiki.HibikiComparisonResponse;
 import com.cloudability.snitch.model.hibiki.HibikiPostRequest;
 import com.cloudability.snitch.model.hibiki.HibikiResponse;
-import com.cloudability.streams.Gullectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import org.apache.http.entity.ContentType;
@@ -26,13 +23,9 @@ public class HibikiDao {
     this.baseUrl = baseUrl;
   }
 
-  public double getCompare(ImmutableList<Account> accounts) {
+  public double getCompare(String orgId) {
 
-    ImmutableList<String> accountIdentifiers = accounts.stream()
-        .map(account -> account.accountIdentifier)
-        .collect(Gullectors.toImmutableList());
-
-    HibikiPostRequest post = new HibikiPostRequest(accountIdentifiers);
+    HibikiPostRequest post = new HibikiPostRequest(AccountCache.getAllAccountIdentifiersWithDashes(orgId));
     Optional<HibikiComparisonResponse> response = Optional.empty();
     try {
       String postJson = MAPPER.writeValueAsString(post);
@@ -45,13 +38,10 @@ public class HibikiDao {
     return response.get().result.products.ec2.costComparison.get(7).costs.totalEstimatedSavings;
   }
 
-  public Optional<HibikiResponse> getPlan(ImmutableList<Account> accounts) {
-    ImmutableList<String> accountIdentifiers = accounts.stream()
-        .map(account -> account.accountIdentifier)
-        .collect(Gullectors.toImmutableList());
+  public Optional<HibikiResponse> getPlan(String orgId) {
 
-    HibikiPostRequest post = new HibikiPostRequest(accountIdentifiers);
-    Optional<HibikiResponse> response = Optional.empty();
+    HibikiPostRequest post = new HibikiPostRequest(AccountCache.getAllAccountIdentifiersWithDashes(orgId));
+    Optional<HibikiResponse> response;
     try {
       String postJson = MAPPER.writeValueAsString(post);
       StringEntity entity = new StringEntity(postJson, ContentType.APPLICATION_JSON);

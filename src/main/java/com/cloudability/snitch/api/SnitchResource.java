@@ -65,8 +65,6 @@ public class SnitchResource {
   @Path("/org/{orgId}/accounts")
   public Response getAccounts(@PathParam("orgId") String orgId) {
 
-    System.out.println("GET MY ACCOUNTS!");
-
     return Response.ok().entity(
         AccountCache.getPayerAccounts(orgId))
         .header("Access-Control-Allow-Origin", "*")

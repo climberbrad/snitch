@@ -281,7 +281,9 @@ public class OrgDataBroker {
         numCustomWidgetsCreated,
         lastDataSyncDate,
         awsServiceCount,
-        sells);
+        sells,
+        AccountCache.getPayerAccounts(orgId).size(),
+        AccountCache.getLinkedAccountIdentifiers(orgId).size());
     orgDetailCache.put(orgId, orgDetail);
 
 

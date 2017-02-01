@@ -18,6 +18,8 @@ public class OrgDetail {
   public String lastDataSyncDate;
   public int numAwsServices;
   public long underutilized;
+  public int numPayerAccounts;
+  public int numLinkedAccounts;
 
   public OrgDetail(
       String id,
@@ -36,7 +38,9 @@ public class OrgDetail {
       int numCustomWidgetsCreated,
       String lastDataSyncDate,
       int numAwsServices,
-      long underutilized
+      long underutilized,
+      int numPayerAccounts,
+      int numLinkedAccounts
   ) {
     this.id = id;
     this.subscriptionStartsAt = subscriptionStartsAt;
@@ -55,5 +59,7 @@ public class OrgDetail {
     this.lastDataSyncDate = lastDataSyncDate;
     this.numAwsServices = numAwsServices;
     this.underutilized = underutilized;
+    this.numPayerAccounts = numPayerAccounts;
+    this.numLinkedAccounts = numLinkedAccounts;
   }
 }

@@ -268,7 +268,6 @@ public class OrgDataBroker {
         orgId,
         subscriptionStartsAt,
         activeRiCount,
-        AccountCache.getAllAccountIdentifiersWithDashes(orgId).size(),
         savingsFromPlan,
         lastLogin,
         numRisExpiringNextMonth,
@@ -281,9 +280,7 @@ public class OrgDataBroker {
         numCustomWidgetsCreated,
         lastDataSyncDate,
         awsServiceCount,
-        sells,
-        AccountCache.getPayerAccounts(orgId).size(),
-        AccountCache.getLinkedAccountIdentifiers(orgId).size());
+        sells);
     orgDetailCache.put(orgId, orgDetail);
 
 

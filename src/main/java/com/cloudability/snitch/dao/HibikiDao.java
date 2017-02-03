@@ -1,8 +1,11 @@
 package com.cloudability.snitch.dao;
 
+import static com.cloudability.snitch.AccountUtil.getAllAccountIdentifiersWithDashes;
 import static com.cloudability.snitch.SnitchServer.MAPPER;
 
-import com.cloudability.snitch.AccountCache;
+import com.google.common.collect.ImmutableList;
+
+import com.cloudability.snitch.model.PayerAccount;
 import com.cloudability.snitch.model.hibiki.HibikiComparisonResponse;
 import com.cloudability.snitch.model.hibiki.HibikiPostRequest;
 import com.cloudability.snitch.model.hibiki.HibikiResponse;
@@ -23,9 +26,9 @@ public class HibikiDao {
     this.baseUrl = baseUrl;
   }
 
-  public double getCompare(String orgId) {
+  public double getComparisonData(ImmutableList<PayerAccount> payerAccounts) {
 
-    HibikiPostRequest post = new HibikiPostRequest(AccountCache.getAllAccountIdentifiersWithDashes(orgId));
+    HibikiPostRequest post = new HibikiPostRequest(getAllAccountIdentifiersWithDashes(payerAccounts));
     Optional<HibikiComparisonResponse> response = Optional.empty();
     try {
       String postJson = MAPPER.writeValueAsString(post);
@@ -34,13 +37,11 @@ public class HibikiDao {
     } catch (JsonProcessingException e) {
       log.error("Unable to call Alexandria", e);
     }
-
     return response.get().result.products.ec2.costComparison.get(7).costs.totalEstimatedSavings;
   }
 
-  public Optional<HibikiResponse> getPlan(String orgId) {
-
-    HibikiPostRequest post = new HibikiPostRequest(AccountCache.getAllAccountIdentifiersWithDashes(orgId));
+  public Optional<HibikiResponse> getPlan(ImmutableList<PayerAccount> payerAccounts) {
+    HibikiPostRequest post = new HibikiPostRequest(getAllAccountIdentifiersWithDashes(payerAccounts));
     Optional<HibikiResponse> response;
     try {
       String postJson = MAPPER.writeValueAsString(post);

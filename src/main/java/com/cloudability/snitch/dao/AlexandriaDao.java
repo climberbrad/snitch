@@ -1,10 +1,11 @@
 package com.cloudability.snitch.dao;
 
+import static com.cloudability.snitch.AccountUtil.getAllAccountIdentifiersNoDashes;
 import static com.cloudability.snitch.SnitchServer.MAPPER;
 
 import com.google.common.collect.ImmutableList;
 
-import com.cloudability.snitch.AccountCache;
+import com.cloudability.snitch.model.PayerAccount;
 import com.cloudability.snitch.model.alexandria.AlexandriaPostRequest;
 import com.cloudability.snitch.model.alexandria.AlexandriaResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -24,12 +25,16 @@ public class AlexandriaDao {
     this.baseUrl = baseUrl;
   }
 
-  public int getActiveRiCount(String orgId) {
+  /**
+   * Number of current RIs
+   *
+   * @param accountIdentifiers
+   * @return
+   */
+  public int getActiveRiCount(ImmutableList<PayerAccount> accountIdentifiers) {
     ImmutableList<String> filters = ImmutableList.of("state==active");
 
-
-
-    AlexandriaPostRequest post = new AlexandriaPostRequest(AccountCache.getAllAccountIdentifiersNoDashes(orgId), filters, 0);
+    AlexandriaPostRequest post = new AlexandriaPostRequest(getAllAccountIdentifiersNoDashes(accountIdentifiers), filters, 0);
     Optional<AlexandriaResponse> response = Optional.empty();
     try {
       StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
@@ -41,7 +46,12 @@ public class AlexandriaDao {
     return response.isPresent() ? response.get().aggregate.quantity : 0;
   }
 
-  public int getNumRisExpiringNextMonth(String orgId) {
+  /**
+   *
+   * @param payerAccounts
+   * @return
+   */
+  public int getNumRisExpiringNextMonth(ImmutableList<PayerAccount> payerAccounts) {
 
     long nextMonth = System.currentTimeMillis() + 2592000000l;
 
@@ -51,7 +61,7 @@ public class AlexandriaDao {
         "end < " + nextMonth
     );
 
-    AlexandriaPostRequest post = new AlexandriaPostRequest(AccountCache.getAllAccountIdentifiersNoDashes(orgId), filters, 0);
+    AlexandriaPostRequest post = new AlexandriaPostRequest(getAllAccountIdentifiersNoDashes(payerAccounts), filters, 0);
     Optional<AlexandriaResponse> response = Optional.empty();
     try {
       StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
@@ -63,13 +73,17 @@ public class AlexandriaDao {
     return response.isPresent() ? response.get().aggregate.quantity : 0;
   }
 
-  public long getDateOfLastRiPurchase(String orgId) {
+  /**
+   *
+   * @param payerAccounts
+   * @return
+   */
+  public long getDateOfLastRiPurchase(ImmutableList<PayerAccount> payerAccounts) {
     ImmutableList<String> filters = ImmutableList.of(
         "state==active"
     );
 
-
-    AlexandriaPostRequest post = new AlexandriaPostRequest(AccountCache.getAllAccountIdentifiersNoDashes(orgId), filters, 1);
+    AlexandriaPostRequest post = new AlexandriaPostRequest(getAllAccountIdentifiersNoDashes(payerAccounts), filters, 1);
     Optional<AlexandriaResponse> response = Optional.empty();
     try {
       StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
@@ -80,4 +94,5 @@ public class AlexandriaDao {
 
     return (response.isPresent() && response.get().result.size() > 0) ? Long.valueOf(response.get().result.get(0).start).longValue() : 0;
   }
+
 }

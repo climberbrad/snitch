@@ -42,14 +42,14 @@ public class SnitchServer extends CloudabilityApp {
         .withAppName("Snitch")
         .withJsonMapper(MAPPER)
         .withServices(connectionManager)
+        .withResource(new AccountUtil(new PipelineDao(pipelineAccountUrl)))
         .withResource(new SnitchResource(
             new OrgDataBroker(
                 guiDao,
                 new AnkenyDao(ankenyBaseUrl),
                 new RedshiftDao(redshiftConnectionManager),
                 new AlexandriaDao(alexandriaBaseUrl),
-                new HibikiDao(hibikiBaseUrl),
-                new AccountCache(pipelineDao))
+                new HibikiDao(hibikiBaseUrl))
         ));
   }
 

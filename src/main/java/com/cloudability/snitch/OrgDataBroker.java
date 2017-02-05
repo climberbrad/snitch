@@ -85,15 +85,23 @@ public class OrgDataBroker {
     String[] result = new String[duration];
     int index = 0;
 
+    int month = 0;
     for (int i = start; i < start + duration; i++) {
-      result[index] = ALL_MONTHS_CATEGORY[i - 1];
+      month = i > 12 ? 1 : i;
+      result[index] = ALL_MONTHS_CATEGORY[month - 1];
       index++;
     }
 
     return result;
   }
 
-  public LineGraph buildLineGraph(String orgId, ImmutableList<PayerAccount> payerAccounts, String graphName, Instant startDate, Instant endDate) {
+  public LineGraph buildLineGraph(
+      String orgId,
+      ImmutableList<PayerAccount> payerAccounts,
+      String graphName,
+      Instant startDate,
+      Instant endDate)
+  {
     int groupId = guiDao.getGroupId(orgId);
 
     // total logins
@@ -142,6 +150,7 @@ public class OrgDataBroker {
       );
     }
 
+    // one month logins
     if (graphName.equalsIgnoreCase("oneMonthLogins")) {
       Instant start = Instant.now().minus(30, ChronoUnit.DAYS);
       Instant end = Instant.now();
@@ -153,6 +162,7 @@ public class OrgDataBroker {
       );
     }
 
+    // two month logins
     if (graphName.equalsIgnoreCase("twoMonthLogins")) {
       Instant start = Instant.now().minus(60, ChronoUnit.DAYS);
       Instant end = Instant.now();
@@ -234,10 +244,10 @@ public class OrgDataBroker {
         .setScale(2, RoundingMode.HALF_UP)
         .doubleValue();
 
-    Instant now = Instant.now();
-    Instant monthAgo = Instant.now().minus(30, ChronoUnit.DAYS);
-    Instant twoMonthsAgo = Instant.now().minus(60, ChronoUnit.DAYS);
-    Instant yearAgo = Instant.now().minus(365, ChronoUnit.DAYS);
+    Instant now = Instant.now().truncatedTo(ChronoUnit.DAYS);
+    Instant monthAgo = Instant.now().minus(30, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
+    Instant twoMonthsAgo = Instant.now().minus(60, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
+    Instant yearAgo = Instant.now().minus(366, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
 
     String planLastExecuted = redshiftDao.getLastRiPlanDate(orgId);
     String lastLogin = redshiftDao.getLatestLogin(orgId);

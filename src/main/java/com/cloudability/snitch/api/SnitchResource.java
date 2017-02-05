@@ -53,12 +53,17 @@ public class SnitchResource {
       List<PayerAccount> payerAccounts)
   {
     return Response.ok()
-        .entity(orgDataBroker.buildLineGraph(orgId, ImmutableList.copyOf(payerAccounts), graphName, Instant.now().minus(365, ChronoUnit.DAYS), Instant.now()))
+        .entity(orgDataBroker.buildLineGraph(
+            orgId, ImmutableList.copyOf(payerAccounts),
+            graphName,
+            Instant.now().minus(366, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS),
+            Instant.now().truncatedTo(ChronoUnit.DAYS))
+        )
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 
-  @GET
+  @POST
   @Path("/org/{orgId}/piechart/{graphName}")
   public Response generatePieChart(
       @PathParam("orgId") String orgId,
@@ -67,7 +72,12 @@ public class SnitchResource {
       @QueryParam("linkedAccounts") String linkedAccountIds
   ) {
     return Response.ok()
-        .entity(orgDataBroker.buildPieChart(orgId, graphName, Instant.now().minus(365, ChronoUnit.DAYS), Instant.now()))
+        .entity(orgDataBroker.buildPieChart(
+            orgId,
+            graphName,
+            Instant.now().minus(365, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS),
+            Instant.now())
+        )
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

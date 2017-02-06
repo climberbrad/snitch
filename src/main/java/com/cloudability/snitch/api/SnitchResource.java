@@ -39,7 +39,6 @@ public class SnitchResource {
   public Response getOrgs() {
     return Response.ok()
         .entity(snitchRequestBroker.getActiveOrgList())
-        .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 
@@ -59,7 +58,6 @@ public class SnitchResource {
             Instant.now().minus(366, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS),
             Instant.now().truncatedTo(ChronoUnit.DAYS))
         )
-        .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 
@@ -78,7 +76,6 @@ public class SnitchResource {
             Instant.now().minus(365, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS),
             Instant.now())
         )
-        .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 
@@ -92,7 +89,6 @@ public class SnitchResource {
   ) {
     return Response.ok()
         .entity(snitchRequestBroker.getOrgDetail(orgId, ImmutableList.copyOf(payerAccounts)))
-        .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 
@@ -102,7 +98,6 @@ public class SnitchResource {
 
     return Response.ok()
         .entity(AccountUtil.getAccounts(orgId))
-        .header("Access-Control-Allow-Origin", "*")
         .build();
   }
 }

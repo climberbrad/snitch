@@ -41,7 +41,6 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
@@ -276,7 +275,7 @@ public class SnitchRequestBroker {
     }
 
     DateTimeFormatter formatter =
-        DateTimeFormatter.ofLocalizedDateTime( FormatStyle.SHORT )
+        DateTimeFormatter.ofPattern("yyyy-MM-dd")
             .withLocale( Locale.UK )
             .withZone( ZoneId.systemDefault() );
 

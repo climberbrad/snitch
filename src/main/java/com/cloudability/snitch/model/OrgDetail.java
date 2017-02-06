@@ -4,7 +4,7 @@ public class OrgDetail {
   public final String id;
   public final String subscriptionStartsAt;
   public final int numReservations;
-  public final double savingsFromPlan;
+  public final String savingsFromPlan;
   public final String lastLogin;
   public final int numRisExpiringNextMonth;
   public String dateOfLastRiPurchase;
@@ -15,14 +15,14 @@ public class OrgDetail {
   public String numPlannerPageLoads;
   public int numCustomWidgetsCreated;
   public String lastDataSyncDate;
-  public int numAwsServices;
+  public int numAwsServices = 0;
   public long underutilized;
 
   public OrgDetail(
       String id,
       String subscriptionStartsAt,
       int numReservations,
-      double savingsFromPlan,
+      String savingsFromPlan,
       String lastLogin,
       int numRisExpiringNextMonth,
       String dateOfLastRiPurchase,

@@ -30,11 +30,6 @@ public class SnitchResource {
   }
 
   @GET
-  public Response healthCheck() {
-    return Response.ok().entity("Shhhhhh!").build();
-  }
-
-  @GET
   @Path("/orgs")
   public Response getOrgs() {
     return Response.ok()

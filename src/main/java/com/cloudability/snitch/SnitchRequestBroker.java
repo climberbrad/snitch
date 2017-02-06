@@ -37,6 +37,7 @@ import org.joda.time.Months;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -240,9 +241,10 @@ public class SnitchRequestBroker {
     int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(payerAccounts);
     String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(payerAccounts));
 
-    double savingsFromPlan = BigDecimal.valueOf(hibikiDao.getComparisonData(payerAccounts))
+    NumberFormat formatter = NumberFormat.getCurrencyInstance();
+    String savingsFromPlan = formatter.format(BigDecimal.valueOf(hibikiDao.getComparisonData(payerAccounts))
         .setScale(2, RoundingMode.HALF_UP)
-        .doubleValue();
+        .doubleValue());
 
     Instant now = Instant.now().truncatedTo(ChronoUnit.DAYS);
     Instant monthAgo = Instant.now().minus(30, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
@@ -258,8 +260,9 @@ public class SnitchRequestBroker {
     String totalPlannerPageLoads = redshiftDao.getTotalPlanerPageLoads(orgId);
     int numCustomWidgetsCreated = redshiftDao.getNumCustomWidgetsCreated(orgId);
 
-    ImmutableList<SeriesData> serviceSpendLastMonth = getAwsSpendPerServiceData(orgId, payerAccounts, groupId, yearAgo, now);
-    int awsServiceCount = serviceSpendLastMonth.size();
+//    ImmutableList<SeriesData> serviceSpendLastMonth = getAwsSpendPerServiceData(orgId, payerAccounts, groupId, yearAgo, now);
+//    int awsServiceCount = serviceSpendLastMonth.size();
+    int awsServiceCount = 0;
 
     // subscription start for primary account
     String subscriptionStartsAt = guiDao.getSubscriptionStartDate(orgId);
@@ -274,7 +277,7 @@ public class SnitchRequestBroker {
               .filter(act -> act.action.equalsIgnoreCase("sell"))).count();
     }
 
-    DateTimeFormatter formatter =
+    DateTimeFormatter dateTimeFormatter =
         DateTimeFormatter.ofPattern("yyyy-MM-dd")
             .withLocale( Locale.UK )
             .withZone( ZoneId.systemDefault() );
@@ -284,7 +287,7 @@ public class SnitchRequestBroker {
         subscriptionStartsAt,
         activeRiCount,
         savingsFromPlan,
-        formatter.format(loginMap.keySet().iterator().next()),
+        dateTimeFormatter.format(loginMap.keySet().iterator().next()),
         numRisExpiringNextMonth,
         dateOfLastRiPurchase,
         planLastExecuted,
@@ -329,6 +332,9 @@ public class SnitchRequestBroker {
             endDate);
 
     List<RecordList> records = response.get().records;
+    if(records == null) {
+      return ImmutableList.of();
+    }
     double[] dataPoints = new double[records.size()];
 
     for (int i = 0; i < records.size(); i++) {

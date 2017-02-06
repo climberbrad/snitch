@@ -2,7 +2,6 @@ package com.cloudability.snitch;
 
 import com.cloudability.platform.server.CloudabilityApp;
 import com.cloudability.platform.server.CloudabilityService;
-import com.cloudability.snitch.api.SnitchHealthCheck;
 import com.cloudability.snitch.api.SnitchResource;
 import com.cloudability.snitch.config.JdbcConfig;
 import com.cloudability.snitch.config.RedshiftConfig;
@@ -13,6 +12,7 @@ import com.cloudability.snitch.dao.HibikiDao;
 import com.cloudability.snitch.dao.PipelineDao;
 import com.cloudability.snitch.dao.RedshiftDao;
 import com.cloudability.snitch.dao.SnitchDbConnectionManager;
+import com.cloudability.snitch.healthcheck.SnitchHealthCheck;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -38,7 +38,6 @@ public class SnitchServer extends CloudabilityApp {
     String hibikiBaseUrl = configuration.getString("hibiki.baseUrl");
     String pipelineAccountUrl = configuration.getString("account.baseUrl");
 
-    PipelineDao pipelineDao = new PipelineDao(pipelineAccountUrl);
     GuiDao guiDao = new GuiDao(connectionManager);
     cldyServiceBuilder
         .withAppName("Snitch")

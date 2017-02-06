@@ -1,4 +1,4 @@
-package com.cloudability.snitch.api;
+package com.cloudability.snitch.healthcheck;
 
 import com.codahale.metrics.health.HealthCheck;
 

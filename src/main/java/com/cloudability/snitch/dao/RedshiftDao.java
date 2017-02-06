@@ -13,10 +13,12 @@ import org.apache.logging.log4j.Logger;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 // import com.amazon.redshift.jdbc41.DataSource;
@@ -24,7 +26,7 @@ import java.util.Map;
 public class RedshiftDao {
   private static final Logger log = LogManager.getLogger();
   private final SnitchDbConnectionManager connectionManager;
-  public final DateTimeFormatter DB_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
+  public final DateTimeFormatter DB_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.of("UTC"));
 
   private static final String SELECT_MONTHLY_LOGINS = "SELECT name, count(name), date_part('month', sent_at) as month "
       + "FROM success.dashboard_index "
@@ -42,12 +44,20 @@ public class RedshiftDao {
       + "and sent_at <= ?"
       + "group by day, name";
 
-  public static final String COUNT_LOGINS = "SELECT count(*) "
-      + "FROM success.dashboard_index "
-      + "where env = 'production' "
-      + "and org_id =  ? "
+//  public static final String COUNT_LOGINS = "SELECT count(*) "
+//      + "FROM success.dashboard_index "
+//      + "where env = 'production' "
+//      + "and org_id =  ? "
+//      + "and sent_at >= ? "
+//      + "and sent_at <= ?";
+
+  public static final String LOGINS_PER_DAY = "SELECT count(*), date(sent_at) "
+      + "FROM success.dashboard_index  "
+      + "where env = 'production'  "
+      + "and org_id =  ?  "
       + "and sent_at >= ? "
-      + "and sent_at <= ?";
+      + "and sent_at <= ? "
+      + "group by sent_at order by sent_at desc";
 
   private static final String SELECT_LATEST_LOGIN = "SELECT name, date(sent_at) "
       + "FROM success.dashboard_index "
@@ -144,24 +154,24 @@ public class RedshiftDao {
     return loginStatBuilder.build();
   }
 
-  public String getLatestLogin(String orgId) {
-    String loginDate = "";
-    try (Connection conn = connectionManager.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(SELECT_LATEST_LOGIN)) {
-      stmt.setString(1, orgId);
-
-
-      try (ResultSet rs = stmt.executeQuery()) {
-        while (rs.next()) {
-          String userName = rs.getString(1);
-          loginDate = rs.getString(2);
-        }
-      }
-    } catch (Exception ex) {
-      log.error("Unable to get Active Orgs", ex);
-    }
-    return loginDate;
-  }
+//  public String getLatestLogin(String orgId) {
+//    String loginDate = "";
+//    try (Connection conn = connectionManager.getConnection();
+//         PreparedStatement stmt = conn.prepareStatement(SELECT_LATEST_LOGIN)) {
+//      stmt.setString(1, orgId);
+//
+//
+//      try (ResultSet rs = stmt.executeQuery()) {
+//        while (rs.next()) {
+//          String userName = rs.getString(1);
+//          loginDate = rs.getString(2);
+//        }
+//      }
+//    } catch (Exception ex) {
+//      log.error("Unable to get Active Orgs", ex);
+//    }
+//    return loginDate;
+//  }
 
   public String getLastRiPlanDate(String orgId) {
     String planLastExecutedDate = "";
@@ -180,24 +190,45 @@ public class RedshiftDao {
     return planLastExecutedDate;
   }
 
-  public String getLoginCount(String orgId, Instant after, Instant before) {
-    String numLoginsLastMonth = "";
+  public ImmutableMap<Instant, Integer> getLoginsPerDay(String orgId, Instant after, Instant before) {
+    LinkedHashMap<Instant, Integer> loginMap = new LinkedHashMap<>();
+
     try (Connection conn = connectionManager.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(COUNT_LOGINS)) {
+         PreparedStatement stmt = conn.prepareStatement(LOGINS_PER_DAY)) {
       stmt.setString(1, orgId);
       stmt.setString(2, DB_DATE_FORMATTER.format(after));
       stmt.setString(3, DB_DATE_FORMATTER.format(before));
 
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          numLoginsLastMonth = rs.getString(1);
+          Integer count = rs.getInt(1);
+          loginMap.put(new SimpleDateFormat("yyyy-MM-dd").parse(rs.getString(2)).toInstant(), count);
         }
       }
     } catch (Exception ex) {
       log.error("Unable to get Active Orgs", ex);
     }
-    return numLoginsLastMonth;
+    return ImmutableMap.copyOf(loginMap);
   }
+
+//  public String getLoginCount(String orgId, Instant after, Instant before) {
+//    String numLoginsLastMonth = "";
+//    try (Connection conn = connectionManager.getConnection();
+//         PreparedStatement stmt = conn.prepareStatement(COUNT_LOGINS)) {
+//      stmt.setString(1, orgId);
+//      stmt.setString(2, DB_DATE_FORMATTER.format(after));
+//      stmt.setString(3, DB_DATE_FORMATTER.format(before));
+//
+//      try (ResultSet rs = stmt.executeQuery()) {
+//        while (rs.next()) {
+//          numLoginsLastMonth = rs.getString(1);
+//        }
+//      }
+//    } catch (Exception ex) {
+//      log.error("Unable to get Active Orgs", ex);
+//    }
+//    return numLoginsLastMonth;
+//  }
 
   public String totalPageLoadCount(String orgId, Instant after, Instant before) {
     String numLoginsLastMonth = "";

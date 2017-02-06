@@ -9,8 +9,8 @@ public class OrgDetail {
   public final int numRisExpiringNextMonth;
   public String dateOfLastRiPurchase;
   public String planLastExecuted;
-  public String numLoginsLastMonth;
-  public String numLoginsLastTwoMonth;
+  public int numLoginsLastMonth;
+  public int numLoginsLastTwoMonth;
   public String numTotalPageLoads;
   public String numPlannerPageLoads;
   public int numCustomWidgetsCreated;
@@ -27,8 +27,8 @@ public class OrgDetail {
       int numRisExpiringNextMonth,
       String dateOfLastRiPurchase,
       String planLastExecuted,
-      String numLoginsLastMonth,
-      String numLoginsLastTwoMonth,
+      int numLoginsLastMonth,
+      int numLoginsLastTwoMonth,
       String numTotalPageLoads,
       String numPlannerPageLoads,
       int numCustomWidgetsCreated,

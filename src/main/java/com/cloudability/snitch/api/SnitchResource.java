@@ -3,7 +3,7 @@ package com.cloudability.snitch.api;
 import com.google.common.collect.ImmutableList;
 
 import com.cloudability.snitch.AccountUtil;
-import com.cloudability.snitch.OrgDataBroker;
+import com.cloudability.snitch.SnitchRequestBroker;
 import com.cloudability.snitch.model.PayerAccount;
 
 import java.time.Instant;
@@ -23,10 +23,10 @@ import javax.ws.rs.core.Response;
 @Path("/v1")
 @Produces({MediaType.APPLICATION_JSON})
 public class SnitchResource {
-  private final OrgDataBroker orgDataBroker;
+  private final SnitchRequestBroker snitchRequestBroker;
 
-  public SnitchResource(OrgDataBroker orgDataBroker) {
-    this.orgDataBroker = orgDataBroker;
+  public SnitchResource(SnitchRequestBroker snitchRequestBroker) {
+    this.snitchRequestBroker = snitchRequestBroker;
   }
 
   @GET
@@ -38,7 +38,7 @@ public class SnitchResource {
   @Path("/orgs")
   public Response getOrgs() {
     return Response.ok()
-        .entity(orgDataBroker.getActiveOrgList())
+        .entity(snitchRequestBroker.getActiveOrgList())
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }
@@ -53,7 +53,7 @@ public class SnitchResource {
       List<PayerAccount> payerAccounts)
   {
     return Response.ok()
-        .entity(orgDataBroker.buildLineGraph(
+        .entity(snitchRequestBroker.buildLineGraph(
             orgId, ImmutableList.copyOf(payerAccounts),
             graphName,
             Instant.now().minus(366, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS),
@@ -72,7 +72,7 @@ public class SnitchResource {
       @QueryParam("linkedAccounts") String linkedAccountIds
   ) {
     return Response.ok()
-        .entity(orgDataBroker.buildPieChart(
+        .entity(snitchRequestBroker.buildPieChart(
             orgId,
             graphName,
             Instant.now().minus(365, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS),
@@ -91,7 +91,7 @@ public class SnitchResource {
       List<PayerAccount> payerAccounts
   ) {
     return Response.ok()
-        .entity(orgDataBroker.getOrgDetail(orgId, ImmutableList.copyOf(payerAccounts)))
+        .entity(snitchRequestBroker.getOrgDetail(orgId, ImmutableList.copyOf(payerAccounts)))
         .header("Access-Control-Allow-Origin", "*")
         .build();
   }

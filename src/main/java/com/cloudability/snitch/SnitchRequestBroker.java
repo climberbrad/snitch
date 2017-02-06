@@ -1,6 +1,6 @@
 package com.cloudability.snitch;
 
-import static com.cloudability.snitch.AccountUtil.*;
+import static com.cloudability.snitch.AccountUtil.getPayerAccountIdentifiers;
 import static com.cloudability.snitch.dao.RedshiftDao.LOGIN_STAT_WINDOW.DAILY_INCREMENT;
 import static com.cloudability.snitch.dao.RedshiftDao.LOGIN_STAT_WINDOW.MONTHLY_INCREMENT;
 import static java.lang.Math.toIntExact;
@@ -39,13 +39,17 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
-public class OrgDataBroker {
+public class SnitchRequestBroker {
   private final GuiDao guiDao;
   private final AnkenyDao ankenyDao;
   private final RedshiftDao redshiftDao;
@@ -60,7 +64,7 @@ public class OrgDataBroker {
   private static final String[] ALL_MONTHS_CATEGORY =
       new String[]{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-  public OrgDataBroker(
+  public SnitchRequestBroker(
       GuiDao guiDao,
       AnkenyDao ankenyDao,
       RedshiftDao redshiftDao,
@@ -74,18 +78,15 @@ public class OrgDataBroker {
   }
 
   private String[] getMonthlyGraphLabels(Instant startDate, Instant endDate) {
-
     DateTime startDt = new DateTime(startDate.toEpochMilli());
     DateTime endDt = new DateTime(endDate.toEpochMilli());
-
     int start = startDt.monthOfYear().get();
     int duration = Months.monthsBetween(startDt, endDt).getMonths();
-
 
     String[] result = new String[duration];
     int index = 0;
 
-    int month = 0;
+    int month;
     for (int i = start; i < start + duration; i++) {
       month = i > 12 ? 1 : i;
       result[index] = ALL_MONTHS_CATEGORY[month - 1];
@@ -249,12 +250,13 @@ public class OrgDataBroker {
     Instant twoMonthsAgo = Instant.now().minus(60, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
     Instant yearAgo = Instant.now().minus(366, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
 
+
     String planLastExecuted = redshiftDao.getLastRiPlanDate(orgId);
-    String lastLogin = redshiftDao.getLatestLogin(orgId);
+
+    ImmutableMap<Instant, Integer> loginMap = redshiftDao.getLoginsPerDay(orgId, twoMonthsAgo, now);
+
     String numTotalPageLoads = redshiftDao.totalPageLoadCount(orgId, monthAgo, now);
     String totalPlannerPageLoads = redshiftDao.getTotalPlanerPageLoads(orgId);
-    String numLoginsLastMonth = redshiftDao.getLoginCount(orgId, monthAgo, now);
-    String numLoginsLastTwoMonth = redshiftDao.getLoginCount(orgId, twoMonthsAgo, now);
     int numCustomWidgetsCreated = redshiftDao.getNumCustomWidgetsCreated(orgId);
 
     ImmutableList<SeriesData> serviceSpendLastMonth = getAwsSpendPerServiceData(orgId, payerAccounts, groupId, yearAgo, now);
@@ -273,17 +275,22 @@ public class OrgDataBroker {
               .filter(act -> act.action.equalsIgnoreCase("sell"))).count();
     }
 
+    DateTimeFormatter formatter =
+        DateTimeFormatter.ofLocalizedDateTime( FormatStyle.SHORT )
+            .withLocale( Locale.UK )
+            .withZone( ZoneId.systemDefault() );
+
     OrgDetail orgDetail = new OrgDetail(
         orgId,
         subscriptionStartsAt,
         activeRiCount,
         savingsFromPlan,
-        lastLogin,
+        formatter.format(loginMap.keySet().iterator().next()),
         numRisExpiringNextMonth,
         dateOfLastRiPurchase,
         planLastExecuted,
-        numLoginsLastMonth,
-        numLoginsLastTwoMonth,
+        getLastLoginCount(loginMap, monthAgo),
+        getLastLoginCount(loginMap, twoMonthsAgo),
         numTotalPageLoads,
         totalPlannerPageLoads,
         numCustomWidgetsCreated,
@@ -294,6 +301,16 @@ public class OrgDataBroker {
 
 
     return orgDetail;
+  }
+
+  private int getLastLoginCount(ImmutableMap<Instant, Integer> loginCounts, Instant after) {
+    int count = 0;
+    for(Instant instant : loginCounts.keySet()) {
+      if(instant.isAfter(after)) {
+        count = count + loginCounts.get(instant);
+      }
+    }
+    return count;
   }
 
   private ImmutableList<SeriesData> getAwsTotalSpendData(

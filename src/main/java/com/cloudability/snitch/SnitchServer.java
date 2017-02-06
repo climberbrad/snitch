@@ -45,10 +45,10 @@ public class SnitchServer extends CloudabilityApp {
         .withHealthCheck(new SnitchHealthCheck())
         .withJsonMapper(MAPPER)
         .withServices(connectionManager)
-        .withStaticContent("/tamtool", Resource.newClassPathResource("webapp", true, false))
+        .withStaticContent("", Resource.newClassPathResource("webapp", true, false))
         .withResource(new AccountUtil(new PipelineDao(pipelineAccountUrl)))
         .withResource(new SnitchResource(
-            new OrgDataBroker(
+            new SnitchRequestBroker(
                 guiDao,
                 new AnkenyDao(ankenyBaseUrl),
                 new RedshiftDao(redshiftConnectionManager),

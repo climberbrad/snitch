@@ -13,9 +13,10 @@
     height: 68px;
 }
 
-.chart {
+.tam-tool-graph {
     border: 1px solid #cccccc;
     margin: 3px;
+    width: 75%
 }
 
 #details-background {
@@ -86,6 +87,7 @@
     font-size: 18px;
     padding-top: 35px;
     padding-bottom: 5px;
+    color: #ce6846;
 }
 
 .account_data {

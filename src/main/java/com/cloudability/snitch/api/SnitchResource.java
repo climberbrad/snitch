@@ -8,6 +8,7 @@ import com.cloudability.snitch.model.PayerAccount;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Calendar;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
@@ -46,12 +47,17 @@ public class SnitchResource {
       @PathParam("graphName") String graphName,
       List<PayerAccount> payerAccounts)
   {
+    Calendar lastDayOfLastMonth = Calendar.getInstance();
+    lastDayOfLastMonth.add(Calendar.MONTH, -1);
+    int max = lastDayOfLastMonth.getActualMaximum(Calendar.DAY_OF_MONTH);
+    lastDayOfLastMonth.set(Calendar.DAY_OF_MONTH, max);
+
     return Response.ok()
         .entity(snitchRequestBroker.buildLineGraph(
             orgId, ImmutableList.copyOf(payerAccounts),
             graphName,
             Instant.now().minus(366, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS),
-            Instant.now().truncatedTo(ChronoUnit.DAYS))
+            lastDayOfLastMonth.toInstant())
         )
         .build();
   }

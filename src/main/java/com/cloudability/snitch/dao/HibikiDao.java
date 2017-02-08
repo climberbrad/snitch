@@ -8,7 +8,6 @@ import com.cloudability.snitch.model.PayerAccount;
 import com.cloudability.snitch.model.hibiki.HibikiComparisonResponse;
 import com.cloudability.snitch.model.hibiki.HibikiPostRequest;
 import com.cloudability.snitch.model.hibiki.HibikiResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -36,7 +35,8 @@ public class HibikiDao {
     } catch (Exception e) {
       log.error("Unable to call Alexandria", e);
     }
-    return response.get().result != null ? response.get().result.products.ec2.costComparison.get(7).costs.totalEstimatedSavings : 0;
+    double totalEstimatedSavings = response.get().result.products.ec2.costComparison.get(7).costs.totalEstimatedSavings;
+    return response.get().result != null ? totalEstimatedSavings : 0;
   }
 
   public Optional<HibikiResponse> getPlan(ImmutableList<PayerAccount> payerAccounts) {

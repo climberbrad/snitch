@@ -3,7 +3,6 @@ package com.cloudability.snitch;
 import static com.cloudability.snitch.AccountUtil.getPayerAccountIdentifiers;
 import static com.cloudability.snitch.dao.RedshiftDao.LOGIN_STAT_WINDOW.DAILY_INCREMENT;
 import static com.cloudability.snitch.dao.RedshiftDao.LOGIN_STAT_WINDOW.MONTHLY_INCREMENT;
-import static java.lang.Math.toIntExact;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,14 +34,13 @@ import com.cloudability.snitch.model.hibiki.HibikiResponse;
 import org.joda.time.DateTime;
 import org.joda.time.Months;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.text.NumberFormat;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -101,12 +99,11 @@ public class SnitchRequestBroker {
       ImmutableList<PayerAccount> payerAccounts,
       String graphName,
       Instant startDate,
-      Instant endDate)
-  {
+      Instant endDate) {
     int groupId = guiDao.getGroupId(orgId);
 
     // total logins
-    if (graphName.equalsIgnoreCase("totalLogins")) {
+    if (graphName.equalsIgnoreCase("Logins")) {
       return new LineGraph(
           new Chart(GraphType.column),
           new Title(graphName),
@@ -116,7 +113,7 @@ public class SnitchRequestBroker {
     }
 
     // total spend
-    if (graphName.equalsIgnoreCase("totalSpend")) {
+    if (graphName.equalsIgnoreCase("Total Spend")) {
       return new LineGraph(
           new Chart(GraphType.line),
           new Title(graphName),
@@ -126,28 +123,12 @@ public class SnitchRequestBroker {
     }
 
     // total spend per service
-    if (graphName.equalsIgnoreCase("totalSpendPerService")) {
+    if (graphName.equalsIgnoreCase("Spend Per Service")) {
       return new LineGraph(
           new Chart(GraphType.area),
           new Title(graphName),
           new XAxis(getMonthlyGraphLabels(startDate, endDate)),
           getAwsSpendPerServiceData(orgId, payerAccounts, groupId, startDate, endDate)
-      );
-    }
-
-    // 1 month spend per service
-    if (graphName.equalsIgnoreCase("oneMonthTotalSpend")) {
-      int daysBetween = toIntExact(ChronoUnit.DAYS.between(startDate, endDate));
-      String[] xAxisLabel = new String[daysBetween];
-      for (int i = 0; i < daysBetween; i++) {
-        xAxisLabel[i] = String.valueOf(i + 1);
-      }
-
-      return new LineGraph(
-          new Chart(GraphType.area),
-          new Title(graphName),
-          new XAxis(xAxisLabel),
-          getAwsSpendPerServiceData(orgId, payerAccounts, groupId, Instant.now().minus(30, ChronoUnit.DAYS), Instant.now())
       );
     }
 
@@ -203,8 +184,7 @@ public class SnitchRequestBroker {
       String orgId,
       Instant startDate,
       Instant endDate,
-      RedshiftDao.LOGIN_STAT_WINDOW window)
-  {
+      RedshiftDao.LOGIN_STAT_WINDOW window) {
     ImmutableList<UserLogins> loginData = redshiftDao.getLoginData(orgId, startDate, endDate, window);
 
     ImmutableList.Builder seriesDataBuilder = ImmutableList.builder();
@@ -235,39 +215,38 @@ public class SnitchRequestBroker {
   }
 
   public OrgDetail getOrgDetail(String orgId, ImmutableList<PayerAccount> payerAccounts) {
-    int groupId = guiDao.getGroupId(orgId);
+    Instant now = Instant.now().truncatedTo(ChronoUnit.DAYS);
+    Instant monthAgo = Instant.now().minus(30, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
+    Instant twoMonthsAgo = Instant.now().minus(60, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
+    Instant yearAgo = Instant.now().minus(365, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
 
     int activeRiCount = alexandriaDao.getActiveRiCount(payerAccounts);
     int numRisExpiringNextMonth = alexandriaDao.getNumRisExpiringNextMonth(payerAccounts);
     String dateOfLastRiPurchase = DATE_FORMAT.format(alexandriaDao.getDateOfLastRiPurchase(payerAccounts));
-
-    NumberFormat formatter = NumberFormat.getCurrencyInstance();
-    String savingsFromPlan = formatter.format(BigDecimal.valueOf(hibikiDao.getComparisonData(payerAccounts))
-        .setScale(2, RoundingMode.HALF_UP)
-        .doubleValue());
-
-    Instant now = Instant.now().truncatedTo(ChronoUnit.DAYS);
-    Instant monthAgo = Instant.now().minus(30, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
-    Instant twoMonthsAgo = Instant.now().minus(60, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
-    Instant yearAgo = Instant.now().minus(366, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
-
-
+    DecimalFormat dollarFormat = new DecimalFormat("$###,###,###");
+    String savingsFromPlan = dollarFormat.format(hibikiDao.getComparisonData(payerAccounts));
     String planLastExecuted = redshiftDao.getLastRiPlanDate(orgId);
+    ImmutableMap<Instant, Integer> loginMap = redshiftDao.getLoginsPerDay(orgId, yearAgo, now);
 
     DateTimeFormatter dateTimeFormatter =
         DateTimeFormatter.ofPattern("yyyy-MM-dd")
-            .withLocale( Locale.UK )
-            .withZone( ZoneId.systemDefault() );
-    ImmutableMap<Instant, Integer> loginMap = redshiftDao.getLoginsPerDay(orgId, twoMonthsAgo, now);
+            .withLocale(Locale.US)
+            .withZone(ZoneId.of("UTC"));
+
     String lastLogin = loginMap.keySet().size() > 0 ? dateTimeFormatter.format(loginMap.keySet().iterator().next()) : "None";
 
     String numTotalPageLoads = redshiftDao.totalPageLoadCount(orgId, monthAgo, now);
     String totalPlannerPageLoads = redshiftDao.getTotalPlanerPageLoads(orgId);
     int numCustomWidgetsCreated = redshiftDao.getNumCustomWidgetsCreated(orgId);
 
-//    ImmutableList<SeriesData> serviceSpendLastMonth = getAwsSpendPerServiceData(orgId, payerAccounts, groupId, yearAgo, now);
-//    int awsServiceCount = serviceSpendLastMonth.size();
-    int awsServiceCount = 0;
+    ImmutableList<SeriesData> serviceSpendLastMonth =
+        getAwsSpendPerServiceData(orgId, payerAccounts, guiDao.getGroupId(orgId), firstDayOfLastMonth(), lastDayOfLastMonth());
+    int awsServiceCount = serviceSpendLastMonth.size();
+
+    double totalCostLastMonth = serviceSpendLastMonth.stream()
+        .mapToDouble(seriesData -> seriesData.data[seriesData.data.length-1])
+        .sum();
+
 
     // subscription start for primary account
     String subscriptionStartsAt = guiDao.getSubscriptionStartDate(orgId);
@@ -299,7 +278,8 @@ public class SnitchRequestBroker {
         numCustomWidgetsCreated,
         lastDataSyncDate,
         awsServiceCount,
-        sells);
+        sells,
+        dollarFormat.format(totalCostLastMonth));
     orgDetailCache.put(orgId, orgDetail);
 
 
@@ -308,8 +288,8 @@ public class SnitchRequestBroker {
 
   private int getLastLoginCount(ImmutableMap<Instant, Integer> loginCounts, Instant after) {
     int count = 0;
-    for(Instant instant : loginCounts.keySet()) {
-      if(instant.isAfter(after)) {
+    for (Instant instant : loginCounts.keySet()) {
+      if (instant.isAfter(after)) {
         count = count + loginCounts.get(instant);
       }
     }
@@ -321,8 +301,7 @@ public class SnitchRequestBroker {
       int groupId,
       ImmutableList<PayerAccount> payerAccounts,
       Instant startDate,
-      Instant endDate)
-  {
+      Instant endDate) {
 
     Optional<AnkenyResponse> response =
         ankenyDao.getTotalSpend(
@@ -333,7 +312,7 @@ public class SnitchRequestBroker {
             endDate);
 
     List<RecordList> records = response.get().records;
-    if(records == null) {
+    if (records == null) {
       return ImmutableList.of();
     }
     double[] dataPoints = new double[records.size()];
@@ -354,10 +333,10 @@ public class SnitchRequestBroker {
       ImmutableList<PayerAccount> payerAccounts,
       int groupId,
       Instant startDate,
-      Instant endDate)
-  {
+      Instant endDate) {
+
     Optional<AnkenyCostPerServiceResponse> response =
-        ankenyDao.getCostPerService(orgId, payerAccounts, groupId, startDate, endDate);
+        ankenyDao.getCostPerServicePerMonth(orgId, payerAccounts, groupId, startDate, endDate);
 
     List<MultiRecordList> records = response.get().records;
 
@@ -378,5 +357,22 @@ public class SnitchRequestBroker {
       seriesDataBuilder.add(new SeriesData(serviceName, serviceMonthlyData.get(serviceName)));
     }
     return seriesDataBuilder.build();
+  }
+
+  public static Instant firstDayOfLastMonth() {
+    Calendar firstDayOfLastMonth = Calendar.getInstance();
+    firstDayOfLastMonth.add(Calendar.MONTH, -2);
+    firstDayOfLastMonth.set(Calendar.DAY_OF_MONTH, 1);
+
+    return firstDayOfLastMonth.toInstant();
+  }
+
+  public static Instant lastDayOfLastMonth() {
+    Calendar lastDayOfLastMonth = Calendar.getInstance();
+    lastDayOfLastMonth.add(Calendar.MONTH, -2);
+    int max = lastDayOfLastMonth.getActualMaximum(Calendar.DAY_OF_MONTH);
+    lastDayOfLastMonth.set(Calendar.DAY_OF_MONTH, max);
+
+    return lastDayOfLastMonth.toInstant();
   }
 }

@@ -50,7 +50,6 @@ public class AnkenyDao {
         .build();
 
     try {
-//      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(data), ContentType.APPLICATION_JSON);
       return RestUtil.genericPost(client, ankenyBaseUrl, data, AnkenyResponse.class);
     } catch (Exception ex) {
       log.error("Unable to get Ankeny data", ex);
@@ -58,7 +57,7 @@ public class AnkenyDao {
     return Optional.empty();
   }
 
-  public Optional<AnkenyCostPerServiceResponse> getCostPerService(
+  public Optional<AnkenyCostPerServiceResponse> getCostPerServicePerMonth(
       String orgId,
       ImmutableList<PayerAccount> payerAccounts,
       int groupId,

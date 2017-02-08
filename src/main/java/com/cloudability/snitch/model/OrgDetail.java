@@ -7,16 +7,17 @@ public class OrgDetail {
   public final String savingsFromPlan;
   public final String lastLogin;
   public final int numRisExpiringNextMonth;
-  public String dateOfLastRiPurchase;
-  public String planLastExecuted;
-  public int numLoginsLastMonth;
-  public int numLoginsLastTwoMonth;
-  public String numTotalPageLoads;
-  public String numPlannerPageLoads;
-  public int numCustomWidgetsCreated;
-  public String lastDataSyncDate;
+  public final String dateOfLastRiPurchase;
+  public final String planLastExecuted;
+  public final int numLoginsLastMonth;
+  public final int numLoginsLastTwoMonth;
+  public final String numTotalPageLoads;
+  public final String numPlannerPageLoads;
+  public final int numCustomWidgetsCreated;
+  public final String lastDataSyncDate;
   public int numAwsServices = 0;
-  public long underutilized;
+  public final long underutilized;
+  public final String costLastMonth;
 
   public OrgDetail(
       String id,
@@ -34,7 +35,8 @@ public class OrgDetail {
       int numCustomWidgetsCreated,
       String lastDataSyncDate,
       int numAwsServices,
-      long underutilized
+      long underutilized,
+      String costLastMonth
   ) {
     this.id = id;
     this.subscriptionStartsAt = subscriptionStartsAt;
@@ -52,5 +54,6 @@ public class OrgDetail {
     this.lastDataSyncDate = lastDataSyncDate;
     this.numAwsServices = numAwsServices;
     this.underutilized = underutilized;
+    this.costLastMonth = costLastMonth;
   }
 }

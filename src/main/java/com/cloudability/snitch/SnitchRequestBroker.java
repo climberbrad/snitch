@@ -254,7 +254,7 @@ public class SnitchRequestBroker {
     int numCustomWidgetsCreated = redshiftDao.getNumCustomWidgetsCreated(orgId);
 
     ImmutableList<SeriesData> spendPerServicePerMonth =
-        getAwsSpendPerServiceData(orgId, payerAccounts, guiDao.getGroupId(orgId), yearAgo(), startOfThisMonth());
+        getAwsSpendPerServiceData(orgId, payerAccounts, guiDao.getGroupId(orgId), startOfLastMonth(), endOfLastMonth());
     int awsServiceCount = spendPerServicePerMonth.size();
 
     double totalCostLastMonth = spendPerServicePerMonth.stream()

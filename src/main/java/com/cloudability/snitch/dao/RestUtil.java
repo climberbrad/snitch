@@ -21,7 +21,7 @@ import javax.ws.rs.core.Response;
 
 public class RestUtil {
   private static final Logger log = LogManager.getLogger();
-  public static final int ANKENY_TIMEOUT = 9000;
+  public static final int ANKENY_TIMEOUT = 39000;
 
   public static <T, U> Optional<T> genericPost(Client client, String url, U object, Class<T> expectedResultType) {
     Invocation.Builder request = client.target(url)

@@ -10,26 +10,33 @@ import com.cloudability.snitch.model.Ankeny.AnkenyPostData;
 import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
 import com.cloudability.snitch.model.PayerAccount;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
+import javax.ws.rs.client.Client;
+
 public class AnkenyDao {
+  private static final Logger log = LogManager.getLogger();
   public final String ankenyBaseUrl;
+  public final Client client;
   public final DateTimeFormatter ANKENY_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
 
-  public AnkenyDao(String ankenyBaseUrl) {
+  public AnkenyDao(Client client, String ankenyBaseUrl) {
+    this.client = client;
     this.ankenyBaseUrl = ankenyBaseUrl;
   }
 
-  public Optional<AnkenyResponse> getTotalMontlyCostData(
+  public Optional<AnkenyResponse> getTotalSpend(
       String orgId,
       ImmutableList<PayerAccount> payerAccounts,
       int groupId,
       Instant startDate,
-      Instant endDate)
-  {
+      Instant endDate) {
     AnkenyPostData data = AnkenyPostData.newBuilder()
         .withAccount_identifiers(getPayerAccountIdentifiers(payerAccounts))
         .withDimensions(ImmutableList.of("month"))
@@ -41,7 +48,14 @@ public class AnkenyDao {
         .withStart_at(ANKENY_DATE_FORMATTER.format(startDate))
         .withEnd_at(ANKENY_DATE_FORMATTER.format(endDate))
         .build();
-    return RestUtil.ankenyTotalSpendRequest(ankenyBaseUrl, data);
+
+    try {
+//      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(data), ContentType.APPLICATION_JSON);
+      return RestUtil.genericPost(client, ankenyBaseUrl, data, AnkenyResponse.class);
+    } catch (Exception ex) {
+      log.error("Unable to get Ankeny data", ex);
+    }
+    return Optional.empty();
   }
 
   public Optional<AnkenyCostPerServiceResponse> getCostPerService(
@@ -50,7 +64,6 @@ public class AnkenyDao {
       int groupId,
       Instant startDate,
       Instant endDate) {
-
     AnkenyPostData data = AnkenyPostData.newBuilder()
         .withAccount_identifiers(getPayerAccountIdentifiers(payerAccounts))
         .withDimensions(ImmutableList.of("service_name", "month"))
@@ -62,6 +75,7 @@ public class AnkenyDao {
         .withStart_at(ANKENY_DATE_FORMATTER.format(startDate))
         .withEnd_at(ANKENY_DATE_FORMATTER.format(endDate))
         .build();
-    return RestUtil.multiServiceAnkenyPostRequest(ankenyBaseUrl, data);
+
+    return RestUtil.genericPost(client, ankenyBaseUrl, data, AnkenyCostPerServiceResponse.class);
   }
 }

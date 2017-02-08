@@ -254,7 +254,12 @@ public class SnitchRequestBroker {
 
     String planLastExecuted = redshiftDao.getLastRiPlanDate(orgId);
 
+    DateTimeFormatter dateTimeFormatter =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            .withLocale( Locale.UK )
+            .withZone( ZoneId.systemDefault() );
     ImmutableMap<Instant, Integer> loginMap = redshiftDao.getLoginsPerDay(orgId, twoMonthsAgo, now);
+    String lastLogin = loginMap.keySet().size() > 0 ? dateTimeFormatter.format(loginMap.keySet().iterator().next()) : "None";
 
     String numTotalPageLoads = redshiftDao.totalPageLoadCount(orgId, monthAgo, now);
     String totalPlannerPageLoads = redshiftDao.getTotalPlanerPageLoads(orgId);
@@ -271,23 +276,19 @@ public class SnitchRequestBroker {
     String lastDataSyncDate = guiDao.getLastDataSyncDate(payerAccounts);
     Optional<HibikiResponse> response = hibikiDao.getPlan(payerAccounts);
     long sells = 0;
-    if (response.isPresent()) {
+    if (response.isPresent() && response.get().result != null) {
       sells = response.get().result.products.ec2.accountActions.stream()
           .map(accountActions -> accountActions.actions.stream()
               .filter(act -> act.action.equalsIgnoreCase("sell"))).count();
     }
 
-    DateTimeFormatter dateTimeFormatter =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd")
-            .withLocale( Locale.UK )
-            .withZone( ZoneId.systemDefault() );
 
     OrgDetail orgDetail = new OrgDetail(
         orgId,
         subscriptionStartsAt,
         activeRiCount,
         savingsFromPlan,
-        dateTimeFormatter.format(loginMap.keySet().iterator().next()),
+        lastLogin,
         numRisExpiringNextMonth,
         dateOfLastRiPurchase,
         planLastExecuted,
@@ -324,7 +325,7 @@ public class SnitchRequestBroker {
   {
 
     Optional<AnkenyResponse> response =
-        ankenyDao.getTotalMontlyCostData(
+        ankenyDao.getTotalSpend(
             orgId,
             payerAccounts,
             groupId,
@@ -356,12 +357,7 @@ public class SnitchRequestBroker {
       Instant endDate)
   {
     Optional<AnkenyCostPerServiceResponse> response =
-        ankenyDao.getCostPerService(
-            orgId,
-            payerAccounts,
-            groupId,
-            startDate,
-            endDate);
+        ankenyDao.getCostPerService(orgId, payerAccounts, groupId, startDate, endDate);
 
     List<MultiRecordList> records = response.get().records;
 

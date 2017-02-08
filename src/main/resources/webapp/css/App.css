@@ -48,9 +48,10 @@
 }
 
 .organization-name {
-    color: dodgerblue;
+    color: #ce6846;
     font-size: 24px;
     border-bottom: 1px solid #aaa;
+    margin-top: 10px;
 }
 
 .stat {

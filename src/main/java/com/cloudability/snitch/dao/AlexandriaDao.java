@@ -1,27 +1,27 @@
 package com.cloudability.snitch.dao;
 
 import static com.cloudability.snitch.AccountUtil.getAllAccountIdentifiersNoDashes;
-import static com.cloudability.snitch.SnitchServer.MAPPER;
 
 import com.google.common.collect.ImmutableList;
 
 import com.cloudability.snitch.model.PayerAccount;
 import com.cloudability.snitch.model.alexandria.AlexandriaPostRequest;
 import com.cloudability.snitch.model.alexandria.AlexandriaResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
 
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Optional;
 
+import javax.ws.rs.client.Client;
+
 public class AlexandriaDao {
   private static final Logger log = LogManager.getLogger();
   public final String baseUrl;
+  private final Client client;
 
-  public AlexandriaDao(String baseUrl) {
+  public AlexandriaDao(Client client, String baseUrl) {
+    this.client = client;
     this.baseUrl = baseUrl;
   }
 
@@ -37,13 +37,12 @@ public class AlexandriaDao {
     AlexandriaPostRequest post = new AlexandriaPostRequest(getAllAccountIdentifiersNoDashes(accountIdentifiers), filters, 0);
     Optional<AlexandriaResponse> response = Optional.empty();
     try {
-      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
-      response = RestUtil.httpPostRequest(baseUrl, entity, AlexandriaResponse.class);
-    } catch (JsonProcessingException e) {
+      response = RestUtil.genericPost(client, baseUrl, post,AlexandriaResponse.class);
+    } catch (Exception e) {
       log.error("Unable to call Alexandria", e);
     }
 
-    return response.isPresent() ? response.get().aggregate.quantity : 0;
+    return (response.isPresent() && response.get().aggregate != null) ? response.get().aggregate.quantity : 0;
   }
 
   /**
@@ -64,13 +63,12 @@ public class AlexandriaDao {
     AlexandriaPostRequest post = new AlexandriaPostRequest(getAllAccountIdentifiersNoDashes(payerAccounts), filters, 0);
     Optional<AlexandriaResponse> response = Optional.empty();
     try {
-      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
-      response = RestUtil.httpPostRequest(baseUrl, entity, AlexandriaResponse.class);
-    } catch (JsonProcessingException e) {
+      response = RestUtil.genericPost(client, baseUrl, post, AlexandriaResponse.class);
+    } catch (Exception e) {
       log.error("Unable to call Alexandria", e);
     }
 
-    return response.isPresent() ? response.get().aggregate.quantity : 0;
+    return (response.isPresent() && response.get().aggregate != null) ? response.get().aggregate.quantity : 0;
   }
 
   /**
@@ -86,13 +84,12 @@ public class AlexandriaDao {
     AlexandriaPostRequest post = new AlexandriaPostRequest(getAllAccountIdentifiersNoDashes(payerAccounts), filters, 1);
     Optional<AlexandriaResponse> response = Optional.empty();
     try {
-      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
-      response = RestUtil.httpPostRequest(baseUrl, entity, AlexandriaResponse.class);
-    } catch (JsonProcessingException e) {
+      response = RestUtil.genericPost(client, baseUrl, post, AlexandriaResponse.class);
+    } catch (Exception e) {
       log.error("Unable to call Alexandria", e);
     }
 
-    return (response.isPresent() && response.get().result.size() > 0) ? Long.valueOf(response.get().result.get(0).start).longValue() : 0;
+    return (response.isPresent() && response.get().result != null && response.get().result.size() > 0) ? Long.valueOf(response.get().result.get(0).start).longValue() : 0;
   }
 
 }

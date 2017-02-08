@@ -57,6 +57,10 @@ public class GuiDao {
   }
 
   public String getLastDataSyncDate(ImmutableList<PayerAccount> payerAccounts) {
+    if(payerAccounts.size() == 0) {
+      return "unknown";
+    }
+
     String lastSyncDate = "";
     StringBuilder sqlBuilder = new StringBuilder(SELECT_LAST_SYNC_DATE);
 

@@ -1,119 +1,47 @@
 package com.cloudability.snitch.dao;
 
-import static com.cloudability.snitch.SnitchServer.MAPPER;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
+import static org.glassfish.jersey.client.ClientProperties.READ_TIMEOUT;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.CharStreams;
 
 import com.cloudability.snitch.model.PayerAccount;
-import com.cloudability.snitch.model.Ankeny.AnkenyCostPerServiceResponse;
-import com.cloudability.snitch.model.Ankeny.AnkenyPostData;
-import com.cloudability.snitch.model.Ankeny.AnkenyResponse;
-import com.fasterxml.jackson.databind.JsonNode;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHeaders;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.core.GenericType;
+import javax.ws.rs.core.Response;
 
 public class RestUtil {
   private static final Logger log = LogManager.getLogger();
+  public static final int ANKENY_TIMEOUT = 9000;
 
-  public static Optional<AnkenyResponse> ankenyTotalSpendRequest(String url, AnkenyPostData post) {
-    try {
-      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
-      return httpPostRequest(url, entity, AnkenyResponse.class);
-    } catch (Exception ex) {
-      log.error("Unable to make Ankeny request", ex);
-    }
-    return Optional.empty();
+  public static <T, U> Optional<T> genericPost(Client client, String url, U object, Class<T> expectedResultType) {
+    Invocation.Builder request = client.target(url)
+        .request(APPLICATION_JSON_TYPE)
+        .property(READ_TIMEOUT, ANKENY_TIMEOUT);
+
+    T response = request.post(Entity.json(object), expectedResultType);
+
+    return response == null ? Optional.empty() : Optional.of(response);
   }
 
-  public static Optional<AnkenyCostPerServiceResponse> multiServiceAnkenyPostRequest(String url, AnkenyPostData post) {
-    try {
-      StringEntity entity = new StringEntity(MAPPER.writeValueAsString(post), ContentType.APPLICATION_JSON);
-      return httpPostRequest(url, entity, AnkenyCostPerServiceResponse.class);
-    } catch (Exception ex) {
-      log.error("Unable to make Ankeny request", ex);
-    }
-    return Optional.empty();
-  }
+  public static ImmutableList<PayerAccount> getAccounts(Client client, String url) {
+    Invocation.Builder request = client.target(url)
+        .request(APPLICATION_JSON_TYPE)
+        .property(READ_TIMEOUT, 1000);
 
+    Response response = request.get();
+    List<PayerAccount> payerAccounts =
+        response.readEntity(new GenericType<List<PayerAccount>>() {});
 
-  public static ImmutableList<PayerAccount> httpGetAccountsRequest(final String url) {
-    CloseableHttpResponse response = null;
-    String body;
-    PayerAccount[] payerAccounts = null;
-    try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-      HttpGet httpGet = new HttpGet(url);
-      httpGet.addHeader(HttpHeaders.ACCEPT, "application/json");
-      response = httpClient.execute(httpGet);
-      body = CharStreams.toString(new InputStreamReader(response.getEntity().getContent()));
-      payerAccounts = MAPPER.readValue(body, PayerAccount[].class);
-    } catch (IOException ex) {
-      throw new RuntimeException("Unable to get account data from pipeline", ex);
-    } finally {
-      if (response != null) {
-        try {
-          response.close();
-        } catch (IOException ex) {
-          log.error(ex);
-        }
-      }
-    }
-    ImmutableList.Builder<PayerAccount> builder = ImmutableList.builder();
-    builder.addAll(Arrays.asList(payerAccounts));
-    return builder.build();
-  }
-
-  public static <T> Optional<T> httpPostRequest(
-      final String url,
-      final HttpEntity entity,
-      final Class<T> expectedResultType) {
-    CloseableHttpResponse response = null;
-    String body;
-    try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-      HttpPost httpPost = new HttpPost(url);
-      httpPost.addHeader(HttpHeaders.ACCEPT, "application/json");
-      httpPost.setEntity(entity);
-      response = httpClient.execute(httpPost);
-      body = CharStreams.toString(new InputStreamReader(response.getEntity().getContent()));
-    } catch (IOException ex) {
-      throw new RuntimeException("Hibiki Server not available", ex);
-    } finally {
-      if (response != null) {
-        try {
-          response.close();
-        } catch (IOException ex) {
-          log.error(ex);
-        }
-      }
-    }
-    JsonNode json = null;
-    try {
-      json = MAPPER.readTree(body);
-    } catch (IOException e) {
-      log.error("Failed to parse as JSON.", response, e);
-    }
-
-    try {
-      T result = MAPPER.treeToValue(json, expectedResultType);
-      return Optional.ofNullable(result);
-    } catch (Exception ex) {
-      log.error(body, response, ex);
-    }
-    throw new IllegalStateException("Unable to get parse response");
+    return ImmutableList.copyOf(payerAccounts);
   }
 }

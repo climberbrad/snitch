@@ -51,7 +51,6 @@ public class RestUtilTest {
             "61268799130651",
             "e0d7ac226308ca2878cbe60d5d1a95c59fd01ef8976d4d20063ce0bc4e1ec809"
         ))
-        .withBackend("olap")
         .withStart_at("2016-01-01")
         .withEnd_at("2016-01-31")
         .build();

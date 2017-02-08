@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TimeZone;
 
 public class SnitchRequestBroker {
   private final GuiDao guiDao;
@@ -126,6 +127,19 @@ public class SnitchRequestBroker {
     if (graphName.equalsIgnoreCase("Spend Per Service")) {
       return new LineGraph(
           new Chart(GraphType.area),
+          new Title(graphName),
+          new XAxis(getMonthlyGraphLabels(startDate, endDate)),
+          getAwsSpendPerServiceData(orgId, payerAccounts, groupId, startDate, endDate)
+      );
+    }
+
+    // monthly service spend
+    if (graphName.equalsIgnoreCase("Monthly Spend Per Service")) {
+      startDate= startOfLastMonth();
+      endDate = endOfLastMonth();
+
+      return new LineGraph(
+          new Chart(GraphType.column),
           new Title(graphName),
           new XAxis(getMonthlyGraphLabels(startDate, endDate)),
           getAwsSpendPerServiceData(orgId, payerAccounts, groupId, startDate, endDate)
@@ -239,18 +253,15 @@ public class SnitchRequestBroker {
     String totalPlannerPageLoads = redshiftDao.getTotalPlanerPageLoads(orgId);
     int numCustomWidgetsCreated = redshiftDao.getNumCustomWidgetsCreated(orgId);
 
-    ImmutableList<SeriesData> serviceSpendLastMonth =
-        getAwsSpendPerServiceData(orgId, payerAccounts, guiDao.getGroupId(orgId), firstDayOfLastMonth(), lastDayOfLastMonth());
-    int awsServiceCount = serviceSpendLastMonth.size();
+    ImmutableList<SeriesData> spendPerServicePerMonth =
+        getAwsSpendPerServiceData(orgId, payerAccounts, guiDao.getGroupId(orgId), yearAgo(), startOfThisMonth());
+    int awsServiceCount = spendPerServicePerMonth.size();
 
-    double totalCostLastMonth = serviceSpendLastMonth.stream()
+    double totalCostLastMonth = spendPerServicePerMonth.stream()
         .mapToDouble(seriesData -> seriesData.data[seriesData.data.length-1])
         .sum();
 
-
-    // subscription start for primary account
     String subscriptionStartsAt = guiDao.getSubscriptionStartDate(orgId);
-
 
     String lastDataSyncDate = guiDao.getLastDataSyncDate(payerAccounts);
     Optional<HibikiResponse> response = hibikiDao.getPlan(payerAccounts);
@@ -311,6 +322,10 @@ public class SnitchRequestBroker {
             startDate,
             endDate);
 
+    if(!response.isPresent()) {
+      return ImmutableList.of();
+    }
+
     List<RecordList> records = response.get().records;
     if (records == null) {
       return ImmutableList.of();
@@ -347,7 +362,12 @@ public class SnitchRequestBroker {
       int index = Integer.valueOf(record.index).intValue();
 
       if (serviceMonthlyData.get(awsServiceName) == null) {
-        serviceMonthlyData.put(awsServiceName, new double[12]);
+        int months = Months.monthsBetween(
+            new DateTime(startDate.toEpochMilli()),
+            new DateTime(endDate.toEpochMilli()))
+            .getMonths();
+
+        serviceMonthlyData.put(awsServiceName, new double[months == 0 ? 1 : months]);
       }
       serviceMonthlyData.get(awsServiceName)[index - 1] = Double.valueOf(record.entry.sum).doubleValue();
     }
@@ -359,20 +379,36 @@ public class SnitchRequestBroker {
     return seriesDataBuilder.build();
   }
 
-  public static Instant firstDayOfLastMonth() {
-    Calendar firstDayOfLastMonth = Calendar.getInstance();
-    firstDayOfLastMonth.add(Calendar.MONTH, -2);
-    firstDayOfLastMonth.set(Calendar.DAY_OF_MONTH, 1);
+  public static Instant startOfThisMonth() {
+    Calendar before = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+    before.set(Calendar.DAY_OF_MONTH, 1);
 
-    return firstDayOfLastMonth.toInstant();
+    return before.toInstant();
   }
 
-  public static Instant lastDayOfLastMonth() {
-    Calendar lastDayOfLastMonth = Calendar.getInstance();
-    lastDayOfLastMonth.add(Calendar.MONTH, -2);
-    int max = lastDayOfLastMonth.getActualMaximum(Calendar.DAY_OF_MONTH);
-    lastDayOfLastMonth.set(Calendar.DAY_OF_MONTH, max);
-
-    return lastDayOfLastMonth.toInstant();
+  public static Instant yearAgo() {
+  Calendar after = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+    after.add(Calendar.MONTH, -12);
+    after.set(Calendar.DAY_OF_MONTH, 1);
+    return after.toInstant();
   }
+
+  public static Instant startOfLastMonth() {
+    Calendar after = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+    after.add(Calendar.MONTH, -1);
+    after.set(Calendar.DAY_OF_MONTH, 1);
+    return after.toInstant();
+  }
+
+  public static Instant endOfLastMonth() {
+    Calendar lastDay = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+    lastDay.add(Calendar.MONTH, -1);
+    int max = lastDay.getActualMaximum(Calendar.DAY_OF_MONTH);
+    lastDay.set(Calendar.DAY_OF_MONTH, max);
+    return lastDay.toInstant();
+  }
+
+
+
+
 }

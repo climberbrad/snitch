@@ -44,7 +44,6 @@ public class AnkenyDao {
         .withOrganization_id(Integer.valueOf(orgId))
         .withGroup_id(groupId)
         .withLinked_account_identifiers(getLinkedAccountIdentifiers(payerAccounts))
-        .withBackend("olap")
         .withStart_at(ANKENY_DATE_FORMATTER.format(startDate))
         .withEnd_at(ANKENY_DATE_FORMATTER.format(endDate))
         .build();
@@ -70,7 +69,6 @@ public class AnkenyDao {
         .withOrganization_id(Integer.valueOf(orgId))
         .withGroup_id(groupId)
         .withLinked_account_identifiers(getLinkedAccountIdentifiers(payerAccounts))
-        .withBackend("olap")
         .withStart_at(ANKENY_DATE_FORMATTER.format(startDate))
         .withEnd_at(ANKENY_DATE_FORMATTER.format(endDate))
         .build();

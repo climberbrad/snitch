@@ -9,7 +9,6 @@ public class AnkenyPostData {
   public final int organization_id;
   public final int group_id;
   public final ImmutableList<String> linked_account_identifiers;
-  public final String backend;
   public final String start_at;
   public final String end_at;
 
@@ -20,7 +19,6 @@ public class AnkenyPostData {
     organization_id = builder.organization_id;
     group_id = builder.group_id;
     linked_account_identifiers = builder.linked_account_identifiers;
-    backend = builder.backend;
     start_at = builder.start_at;
     end_at = builder.end_at;
   }
@@ -36,7 +34,6 @@ public class AnkenyPostData {
     private int organization_id;
     private int group_id;
     private ImmutableList<String> linked_account_identifiers;
-    private String backend;
     private String start_at;
     private String end_at;
 
@@ -70,11 +67,6 @@ public class AnkenyPostData {
 
     public Builder withLinked_account_identifiers(ImmutableList<String> linked_account_identifiers) {
       this.linked_account_identifiers = linked_account_identifiers;
-      return this;
-    }
-
-    public Builder withBackend(String backend) {
-      this.backend = backend;
       return this;
     }
 

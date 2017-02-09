@@ -36,7 +36,7 @@ public class RestUtil {
   public static ImmutableList<PayerAccount> getAccounts(Client client, String url) {
     Invocation.Builder request = client.target(url)
         .request(APPLICATION_JSON_TYPE)
-        .property(READ_TIMEOUT, 1000);
+        .property(READ_TIMEOUT, 5000);
 
     Response response = request.get();
     List<PayerAccount> payerAccounts =

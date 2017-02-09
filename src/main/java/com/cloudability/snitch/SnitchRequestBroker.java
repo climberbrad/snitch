@@ -32,6 +32,7 @@ import com.cloudability.snitch.model.XAxis;
 import com.cloudability.snitch.model.hibiki.HibikiResponse;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Months;
 
 import java.text.DecimalFormat;
@@ -59,6 +60,7 @@ public class SnitchRequestBroker {
   private static final Map<String, OrgDetail> orgDetailCache = new HashMap<>();
 
   public final static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+  public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.of("UTC"));
 
   private static final String[] ALL_MONTHS_CATEGORY =
       new String[]{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -77,8 +79,8 @@ public class SnitchRequestBroker {
   }
 
   private String[] getMonthlyGraphLabels(Instant startDate, Instant endDate) {
-    DateTime startDt = new DateTime(startDate.toEpochMilli());
-    DateTime endDt = new DateTime(endDate.toEpochMilli());
+    DateTime startDt = new DateTime(startDate.toEpochMilli()).withZone(DateTimeZone.UTC);
+    DateTime endDt = new DateTime(endDate.toEpochMilli()).withZone(DateTimeZone.UTC);
     int start = startDt.monthOfYear().get();
     int duration = Months.monthsBetween(startDt, endDt).getMonths();
 
@@ -363,11 +365,17 @@ public class SnitchRequestBroker {
 
       if (serviceMonthlyData.get(awsServiceName) == null) {
         int months = Months.monthsBetween(
-            new DateTime(startDate.toEpochMilli()),
-            new DateTime(endDate.toEpochMilli()))
+            new DateTime(startDate.toEpochMilli()).withZone(DateTimeZone.UTC),
+            new DateTime(endDate.toEpochMilli()).withZone(DateTimeZone.UTC))
             .getMonths();
 
         serviceMonthlyData.put(awsServiceName, new double[months == 0 ? 1 : months]);
+      }
+
+      try {
+        serviceMonthlyData.get(awsServiceName)[index - 1] = Double.valueOf(record.entry.sum).doubleValue();
+      } catch (IndexOutOfBoundsException ex) {
+        ex.printStackTrace();
       }
       serviceMonthlyData.get(awsServiceName)[index - 1] = Double.valueOf(record.entry.sum).doubleValue();
     }
@@ -383,21 +391,21 @@ public class SnitchRequestBroker {
     Calendar before = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     before.set(Calendar.DAY_OF_MONTH, 1);
 
-    return before.toInstant();
+    return before.toInstant().truncatedTo(ChronoUnit.DAYS);
   }
 
   public static Instant yearAgo() {
   Calendar after = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     after.add(Calendar.MONTH, -12);
     after.set(Calendar.DAY_OF_MONTH, 1);
-    return after.toInstant();
+    return after.toInstant().truncatedTo(ChronoUnit.DAYS);
   }
 
   public static Instant startOfLastMonth() {
     Calendar after = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     after.add(Calendar.MONTH, -1);
     after.set(Calendar.DAY_OF_MONTH, 1);
-    return after.toInstant();
+    return after.toInstant().truncatedTo(ChronoUnit.DAYS);
   }
 
   public static Instant endOfLastMonth() {
@@ -405,7 +413,7 @@ public class SnitchRequestBroker {
     lastDay.add(Calendar.MONTH, -1);
     int max = lastDay.getActualMaximum(Calendar.DAY_OF_MONTH);
     lastDay.set(Calendar.DAY_OF_MONTH, max);
-    return lastDay.toInstant();
+    return lastDay.toInstant().truncatedTo(ChronoUnit.DAYS);
   }
 
 
